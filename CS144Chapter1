@@ -1,0 +1,288 @@
+May 14
+
+NAT - Network Address Translator
+
+Skype used rendezvous server for two clients communicate in two personal machines. When both clients are behind NAT, a Relay is used as a mid party.
+
+### 1-3 The four layer Internet Model: 
+application, transport, network, link
+
+Link: Carry the data over one link at a time to the destination, ex - Wifi
+
+Network: Deliver packets end-to-end across the Internet from the source to the destination.
+A packet is a self-contained collection of data, plus a header that describes what the data is, where is going and where it came from. 
+
+Network (ex. personal devise) sends the data to the Link where Link sends over to the Network (ex. Router) and eventually to its destination. Network layer must use IP. 
+
+Internet Protocol (IP) that holds the internet together. 
+- IP makes a best-effort attempt to deliver our datagrams to the other end. But it makes no promises.
+- IP datagrams can get lost, can be delivered out of order, and can be corrupted. There are no guarantees. 
+
+IP - the 'thin waist'!
+
+Transport: TCP(Transmission Control Protocol) is to make sure that data sent by an application at one end of the Internet is correctly delivered - in the right order - to the application at the other end of the Internet. If the network layer drops the datagrams, TCP would retransmit them, multiple times as needed. TCP would also put the data into correct order if they were unordered. #TCP provides a service to an application guarenteeing correct in-order delivery of data, running on top of the Network Layer service. Ex. email client utilizes TCP. 
+
+Reuse is a big advantage of layer.
+
+UDP(User Datagram Protocol) bundles up application data and hands it into the Network Layer for delivery to the other end.
+
+Application: application sents the get request via ASCII string along with URL of the page being requested. The request sent to the web server application amd then get sent to the transport => network => link layer. Eventually the application would get the responses sent back through layers with a code 200 ok or 400 bad. 
+
+There are also 7 layers
+Application => http     => Application  7
+               ASCII    => Presentation 6
+Transport   => TCP      => Session      5
+                        => Transport    4
+Network     => IP       => Network      3
+Link        => Ethernet => Link         2
+                        => Physical     1
+
+
+
+### 1-3 What the Internet Is => The IP Service
+
+IP datagrams consist of a header and some data. Transport layer hands the data to the Network layer. Network layer puts the info into IP data and IP header and sends the IP datagram to the Link layer. 
+
+Four property of IP:
+1. Datagram: Individually routed packets. Hop-by-hop routing.
+2. Unreliable: Packets might be dropped.
+3. Best effort: ... but only if necessary. (ex. the packet queue in a router might be fill up because of congestion, forcing to drop. It will not resend the data or detect it).
+4. Connectionless: No per-flow state. Packets might be mis-sequenced. 
+
+Why is the IP service so simple?
+1. simple, dumb, minimal: Faster, more streamlined and lower cost to build and maintain.
+2. The end-to-end principle: Where possible, implement features in the end hosts.
+3. Allows a variety of reliable (or unreliable) services to be built on top.
+4. Works over any link layer: IP makes very few assumptions about the link layer below.
+
+The IP Service Model (Details)
+1. Tries to prevent packet looping forever. *TTL* (It starts out with a number like 128 and decremented by every router it passes through. If it reaches zero, it would drop.)
+2. Will fragment packets if they are too long. (Most links have limit of chars. If the info is larger than the limit chars, it would be broken into pieces to be sent. It would provides the nessesary info for the router to correctly reassemble the data later again.)
+3. Uses a header checksum to reduce chances of delivering datagram to wrong destination. 
+4. Allows for new versions of IP
+- Currently IPv4 with 32 bit addresses
+- And IPv6 with 128 bit addresses
+5. Allows for new options to be added to header. 
+
+IPv4 Datagram:
+header followed by data.
+Header includes: 
+- Version (IPv4 or IPv6), Header Length, Type of Service (how importance), Total Packet Length
+- Packet ID, Flags, Fragment Offset
+- Time to Live 'TTL', Protocol ID, Checksum
+- Source IP Address
+- Destination IP Address
+
+Summary:
+We use IP every time we send and receive datagrams. 
+Suggested Textbook: Chapter 4 of the 6th Edition of "Computer Networking: A top down approach"
+
+
+
+### 1-4 Life of a Packet
+
+TCP Byte Stream
+three parts: client, internet, and server
+A server listens for connection requests. A client sends over the requests to the server. 
+
+Three way handshake: 
+1. A client sent a synchronize message 'SYN'. 
+2. A server recognize the synchronize message and also acknowledges the client synchronize, 'SYN/ACK'.
+3. A client responses by the acknowledge the server synchronize, 'ACK'.
+
+Network layer delivers the packets to the computer and transport layer delivers data to the application. The packets sent to different computers look the same which the two parts of address needed: the IP address and the TCP port. IP address is used for network layer to deliver packets to the computers and the TCP port tells the computer software which application to deliver the data to. Web server runs at TCP/IP. IP addresses takes hops (many routers) to its final destination. Each router has its own TCP address which contains a forwarding table.
+
+
+
+### 1-5 Priciple: Packet Switching
+
+What is packet switching?
+- Packet is a self-contained unit of data that carries information necessary for it to reach its destination. Packet switching is the idea that we break data up into discrete, self-contained chunks of data. Each chunk, called a packet, carries sufficient information that a network can deliver the packet to its destination. 
+
+Packet switching is the simple optimization to solve security issue when packing all paths together. Packet switching places each of state in each switch which tells it which next hop to send packets to. 
+
+Two consequences:
+1. Simple packet forwarding. They can make individual local decisions for each packet. 
+2. Efficient sharing of links.
+
+No per-flow state required:
+- Flow: A collection of datagrams belonging to the same end-to-end communication, eg. a TCP connection. 
+- Packet switches dont need state for each flow - each packet is self-contained. Treating each packet independently means the switch can be much simpler to build, manage and troubleshoot. 
+- No per-flow state to be added/removed. 
+- No per-flow state to be stored. 
+- The only thing switches focus on doing is forwarding packets quickly and efficiently.
+- No per-flow state to be changed upon failure. 
+
+Efficient sharing of links
+- Data traffic is bursty
+  => Packet switching allows flows to use all availble link capacity.
+  => Packet switching allows flows to share link capacity.
+This is called Statistical Multiplexing. It is statistical in that each user receives a statistical share of the resource based on how much other are using it. 
+
+Summary: 
+- Packet switches are simple: they forward packets independently, and dont need to know about flows.
+- Packet switching is efficient: It lets us efficiently share the capacity among many flows sharing a link. 
+
+
+
+### 1-6 Principle: Layering
+
+Definition: Layering is the name we give to the organization of a system into a number of separate functional components, or layers. The layers are hierarchical and they communicate sequentially, eg. each layer has an interface only to the layer directly above or below. Each layer provides a well defined service to the layer above, using the services provided by the layers below and its own private processing. The details are abstracted from layers. This separation of concerns allows each layer in the hierarchy to focus on doing its job well, and provides a well defined service to the layer above. 
+
+Summary - 5 reasons for layering
+1. Modularity
+2. Well defined service
+3. Reuse
+4. Separation of concerns
+5. Continous improvement
+
+
+
+### 1-7 Principle: Encapsulation
+
+Encapsulation is the reuslt of what happens when you combine layering and packet switching. Encapsulation is the principle by which you organize information in packets so that you can maintain layers, yet let then share the contents of your packets. 
+
+Each protocol layer has some headers, followed by its payload, followed by some footers. 
+
+Two ways of drawing the packet depending on the background and what part of the system you work on. 
+
+Headers on the left and footers on the right came from software: first bit on left (index of zero).  
+
+Encapsulation Flexibility
+- Encapsulation allows you to layer recursively
+- Ex. Virtual Private Network (VPN):
+  => HTTP (web application payload in)
+  => a TCP transport segment in
+  => an IP network packet in
+  => a secured TLS presentation message in
+  => a TCP transport segment in
+  => an IP network packet in
+  => an Ethernet link frame
+
+Encapsulation:
+- How layering manifests in data representation
+- Encapsulated payloads
+  => help separation of concerns
+  => help enforce boundaries/layering
+  => simplify layer implementations
+
+
+
+### 1-8 Byte Order
+
+Endianness
+- Multibyte words: how do you arrange the bytes?
+- Little endian: least significant byte is at lowest address
+  => Makes most sense from an addressing/computational standpoint
+- Big endian: most significant byte is at lowest address
+  => Makes most sense to a human reader
+
+Portable Code: helper functions: htons(), ntohs(), htonl(), ntohl()
+
+Be careful whenever you handle network data! Otherwise you will waste many (avoidable) hours debugging your code due to forgetting to convert or converting twice. LOL
+
+Maximum length: 65535 bytes
+
+
+
+### 1-9 Names and Addresses: IPv4
+
+Goal of Internet Protocol Addresses
+- Stitch many different networks together
+- Need network-independent, unique address
+
+Internet Protocol, Version 4
+- An IPv4 address identifies a device on the Internet: Layer 3 (network) address
+- 32 bits long (4 octets): a.b.c.d
+  ex. 171.64.64.64
+- Netmask: apply this mask, if it matches, in the same network
+  - Netmask starts with most significant bits. 
+  - Smaller netmask (fewer 1s) means larger network 
+
+Address Structure (historical)
+- Originally hierarchical: network + host
+  => Network to get to correct network (administrative domain)
+  => Host to get to correct device in network (within administrative domain)
+- Originally 3 classes of addresses: class A, class B, class C
+  => class A contains 7 networks and 24 hosts => covers 16 million computers
+  => class B contains 14 networks and 16 hosts => 65536 computers
+  => class C contains 21 networks and 8 hosts => 250 computers
+
+Today: 
+Still assign contiguous ranges of addresses to nearby networks
+- ex. http://news.standford.edu/news/1999/january27/itss|27.html
+Classless Inter-Domain Routing (CIDR)
+- Address block is a pair: address, count
+- Counts are powers of 2, specify netmask length
+- 171.64.0.0/16 means any address in the range 171.64.0.0 to 171.64.255.255
+- A/24 describes 256 addresses, a /20 describes 4096 addresses
+- Stanford today has 5/16 blocks -- 325000 addresses
+
+IPv4 Address Assignment
+- IANA: Internet Assigned Numbers Authority
+  => Internet Corporation for Assignment of Names and Numbers (ICANN)'s job
+- IANA gives out /8s to Reginal Internet Registries (RIRs)
+  => Ran out in Feb 2011, in special end case of giving I to each RIR
+- RIRs responsible for geographic regions, each has own policy
+  => AfriNIC: Africa
+  => ARIN: USA, CANADA, Carribean, Antarctica
+  => APNIC: Asia, Australia, New Zealand
+  => LACNIC: Latin America, Carribean
+  => RIPE NCC: Europe, Russia, Middle East, Central Asia
+
+
+
+### 1-10 Longest Prefix Match
+
+Algorithm IP routers use to chose matching entry from forwarding table.
+
+Forwarding Table consists of a set of partial IP addresses. (a set of CIDR entries)
+- An address might match multiple entries
+
+When a packet arrives, the router checks which forwarding table entry best matches the packet and forwards the packet along the link associated with that forwarding table entry. If no specific one, default is matched. 
+
+Every router has a forwarding table. Algorithm: use forwarding entry with the longest matching prefix
+- ** Longest prefix match will chose link 5 for 171.33.0.1
+
+
+
+### 1-11 Address Resolution Protocol (ARP)
+
+ARP is needed because each protocol layer has its own names and addresses. An IP address is a network-level address. It describes a host, a unique destination at the network layer. 
+
+A link address, in contrast, describes a particular network card, a unique device that sends and receives link layer frames. 
+
+- ARP generates mappings between layer 2 and layer 3 addresses
+  => Nodes cache mappings, cache entries expire
+- Simple request-reply protocol
+  => 'Who has network address X?'
+  => 'I have network address X.'
+- Request sent to link layer broadcast address
+- Reply sent to requesting address (not broadcast)
+- Packet format includes redundant data
+  => Request has sufficient information to generate a mapping
+  => Makes debugging much simpler
+- No "sharing" of state: bad state will die eventually. 
+
+
+Summary 1-12: Recap 
+https://www.youtube.com/watch?v=9eHmQqXGHSY&list=PLEAYkSg4uSQ2dr0XO_Nwa5OcdEcaaELSG&index=21
+
+What we learned
+- How an application uses the Internet
+- The structure of the Internet: The 4 layer model
+- The Internet protocol (IP): What it is
+- Basic architectural ideas and principles
+  => Packet switching
+  => Layering
+  => Encapsulation
+
+
+
+
+
+
+
+
+
+
