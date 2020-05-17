@@ -1,0 +1,216 @@
+Transport Chap 2
+
+### 2-1 The TCP Service Model
+
+TCP - the transmission control protocol - is used by over 95% of Internet applications. It is universally used because it provides the reliable, end-to-end, bi directional byte stream service that almost all applications want. 
+
+TCP is a example of transporat layer. When an application calls TCP, it hands it some bytes that it wants delivered to the other end. TCP places these bytes into a TCP segment and then takes it from there. TCP hands the segment to the IP layer which encapsulates it in an IP datagram. The IP addresses are added. The IP datagram is handed to the Link Layer, which builds the link frame, adds the Link address and then sends it onto the wire. 
+
+When two applications use TCP, they establish a two-way communication channel between the TCP peers at both ends. This is called a "connection". At both ends of the connection, TCP keeps a state machine to keep track of how the connection is doing. A three-way handshake between two ends are used. When they are finishing sending the data, they needs to close the connection and both ends can clean up the state associated with the state machine. TCP layer at Host A can close the connection by sending a FIN(FINISH). Host B acknowledges that A no longer has data to send and stops looking for new data from A. This closes down the data stream from A to B. But B might still have new data to send to A and is not ready to close down the channel from B to A yet. So the message from B to A carrying the ACK can also carry new data from B to A. B can keep sending new data to A as long as it needs to until B finishes and sends the FIN. Host A replys and sends ACK. This closes connections between A and B and removes the state. 
+
+The TCP Service Model
+- Stream of bytes: Reliable byte delivery service.
+- Reliable delivery: 1. Acknowledgements indicate correct delivery.
+                     2. Checksums detect corrupted data.
+                     3. Sequence numbers detect missing data.
+                     4. Flow-control prevents overruning receiver. In TCP, the receiver keeps telling the sender if it can keep sending; specifically, tells the sender how much room it has its buffers to accept new data. 
+- In-sequence: Data delivered to application in sequence transmitted.
+- ***Congestion Control: TCP provides a service to the whole network by controlling network congestions.
+
+The TCP segment header is much longer and more complicated than the IP and the Ethernet headers. This is because a TCP connection is reliable. In order to make the communication reliable, the two ends of the connection need to exchange more information so they know which bytes have arrived, which are missing, and the status of the connection. 
+
+The most important fields in the TCP header: 
+- The Destination port tells the TCP layer which applicatioin the bytes should be delivered to the other end. When a new connection starts up, the application tells TCP which service to open a connection with. Ex. if TCP is carrying web data, it uses port 80, which is the port number for TCP. 
+- The Source port tells the TCP layer at the other end which port it should use to send data back again. When a new connection starts, the initiator of the connection generates a unique source port number, so differentiate the connection from any other connections to the same service. 
+- The sequence # (of first byte) indicated the position in the byte stream of the first byte in the TCP bytes field. 
+- The Acknowledgement Sequence # tells the other end which byte we are expecting next. It also says that we have successfully received every byte up until the one before this byte number. Notice that there are sequence numbers for both directions in every segment. This way, TCP piggybacks acknowledgements on the data segments traveling in the other direction. 
+- The checksum in 16 bit is calculated over the entire header and data, and helps the receiver detect corrupt data. 
+- The header length field tells us how long the TCP header is. 
+- TCP options field - optional, they carry extra, new header fields that were thought of and added after the TCP standard was created. 
+- Flags, a bunch of them, used to signal information from one end of the connection to the other. 
+  - The ACK flag tells us that the Acknowledgement sequence number is valid and we are acknowledging all of the data up until this point.  
+  - The SYN flag tells us that we are signalling a synchronize, which is part of the 3 way handshake to set up the connection. 
+  - And the FIN flag signals the closing of the one direction of the connection. 
+  - the PSH flag tells the TCP layer at the other end to deliver the data immediately upon arrival, rather than wait for more data. This is useful for short segments carrying time critical data, such as a key stroke. 
+
+A TCP connection is uniquely identified by five pieces of information in the TCP and IP headers. The IP source and destination addresses uniquely identify the end points, and the IP Protocol ID for TCP tells us the connection is TCP. The TCP source and destination ports identify they application processes on the end hosts. Together, at any instant, all 5 fields uniquely identify the TCP connection Internet-wide. 
+
+Unique ID only holds if a few thins hold. 
+- First, we need to make sure Host A - the initiator of the connection - picks a unique source port ID. We need to make sure it doesn't accidently pick the same source port number it is already using with another connection to the same service on Host B. Host A uses a simple method to minimize the chances: It increments the source port number for every new connection. The field is 16bits, so it takes 64k new connections before the field wraps round. 
+- There is also a very slight danger that if Host A suddenly creates a lot of new connections to Host B it might still wrap around and try to create two connections with the same global ID. If this happened, the bytes from one connection might become confused with the bytes from another connection. To reduce the changes of confusion, the TCP connections initialize with a random initial sequence number to refer to bytes in the byte stream. While not totally fool proof, it does reduce the chances of confusion. 
+
+Summary: 
+- The sequence number is a segment from A to B includes the sequence number of the first bytes, offset by the initial sequence number. The acknowledge sequence number in the segment from B back to A tells us which byte B is expecting next, offset by A's initial sequence number. 
+- TCP segment works: Imagine that Host B offers two services: A web server and a mail server. When the web client, eg. a Chrome browser on Host A - wants to request a page from the Web server on B, it sends the data to TCP. We'll assume TCP has already established a connection with B, so now it just needs to send the data. It creates a segment and uses destination port 80 to tell B it is requesting the data to be sent to the web server. Host A uses a locally generated source port number for B to use when sending data and acknowledgments back again. As usual, the TCP segment is encapsulated into an IP datagram and sent to B. The IP + TCP headers carry the unique ID of the TCP connection. When the IP datagram arrives at B, the TCP segment is removed. The TCP layer sees that the segment is for port 80 and sends the data to the web server. 
+- Other features: 
+  - Window-based flow control
+  - Retransmission and timeouts
+  - Congestion control
+
+TCP provides in-order, reliable delivery of a stram of bytes between application processes. 
+
+
+
+### 2-2 UDP What the Internet is - The UDP Service Model
+
+UDP is used by applications that don't need the guaranteed delivery service of TCP, either because the application handles retransmissions in its own private way, or because the application just doesnt need reliable delivery. 
+
+UDP is much much simpler than TCP. All UDP does is take application data and create a UDP datagram, then hands it to the network layer. The UDP datagram identifies the application that the data should be sent to at the other end. 
+
+UDP is encapsulated inside the data field of the IP datagram. UDP provides a very simple service, as should be clear from the small number of fields in the UDP header. Unlike TCP that has over ten header fields, UDP has just four. 
+- Source port indicates which application the data comes from. If the far end replies, it will send a datagram with this port number as the destination so that it can find its way back to the correct application. 
+- The destination port indicates which application the data should be delivered to at the other end host. 
+- The port numbers in UDP serve the same purpose as in TCP - they direct incoming packets to the correct application process. 
+- The 16-bit length field specifies the length of the whole UDP datagram - header plus data - in bytes. The value must be at least 8 bytes, because that is the length of the UDP header. 
+- The UDP checksum is optional when using IPv4. If the sender doesnnt include a checksum, the field is filled with all zeros. If a UDP checksum is used, then it is calculated over the UDP header and data. The UDP checksum calculation also includes a portion of the IPv4 header as well, it includes the IP source and destination addresses and the protocol ID which has the calue of 17 and tells us that the IP datagram carries UDP data. The rationale for violating the layering principle and using information from the layer below is that it allows the UDP layer to detect datagrams that were delivered to the wrong destination. 
+- In summary: the UDP header is small because the service it offers the application is very simple. It provides a simple message protocol for sending data from an application on one host that may or may not be delivered to an application on a remote host.
+
+User Datagram Protocol (UDP)
+1. Connectionless Datagram Service: 
+  - No connection established.
+  - Packets may show up in any order.
+2. Self contained datagrams
+3. Unreliable delivery:
+  - No acknowledgments.
+  - No mechanism to detect missing or mis-sequenced datagrams.
+  - No flow control
+
+Why do we have UDP? 
+It is used by applications that dont need reliable delivery, such as simple request-response applications. 
+
+UDP provides a simpler, datagram delivery service between application processes. 
+
+
+
+### 2-4 The Internet Control Message Protocol (ICMP) Service Model
+
+ICMP - Internet Control Message Protocol and it is used to report errors and diagnose problems with the network layer. 
+
+Making the Network Layer Work
+1. The Internet Protocol (IP)
+  - The creation of IP datagrams
+  - Hop-by-hop delivery from end to end
+2. Routing Tables
+  - Algorithms to populate router forwarding tables, so that the routers know how to deliver them hop by hop to the other end
+3. Internet Control Message Protocol (ICMP)
+  - Communicates network layer information between end hosts and routers
+  - Reports error conditions
+  - Helps us diagnose problems
+
+ICMP runs above the network layer, and so strictly speaking it's a transport layer protocol. When an end host or router want to report an error using ICMP, it puts the information that it wants to send back to the source into an ICMP payload. And hands it to IP, to be sent as a datagram. 
+
+ICMP Service Model Property:
+- Reporting Message: Self-contained message reporting error.
+- Unreliable: Simple datagram service - no retries. 
+
+Six most important ICMP message type:
+ICMP Type     ICMP Code    Description
+0             0            Echo Reply (used by ping)
+3             0            Destination Network Unreachable
+3             1            Destination Host Unreachable
+3             3            Destination Port Unreachable
+8             0            Echo Request (used by ping)
+11            0            TTL Expired (used by traceroute)
+
+Summary: the ICMP, the internet control message protocol, provides information about the network layer to the end hosts and routers. It sits above IP and is therefore strictly a transport layer mechanism. The commonly used tools "ping" and "traceroute" both rely on ICMP. 
+
+
+
+### 2-4 The End-to-end Principle
+
+The end-to-end principle holds a very special place in the design of the Internet. This is because it really refers to two different principles: the correctness and "strong".
+
+
+Correctness: 
+There are many things the network could do to improve our application and make our designing it easier. But it doesn't. Why? 
+- The function in question can completely and correctly be implemented only with the knowledge and help of the application standing at the end points of the communication system. Therefore, providing that questioned function as a feature of the communication system itself is not possible. (Sometimes and incomplete version of the function provided by the communication system may be useful as a performance enhancement.) We call this line of reasoning... "the end-to-end argument." 
+
+The only way to be sure the file arrives correctly is to perform an end-to-end check. When the source sends the file, it includes some error detection information. When the destination reassembles the file, it checks whether the file, it its entirety, has any errors. 
+
+If you want end-to-end reliable data transfer, then you need an end-to-end reliable protocol like TCP. But following the end-to-end argument, while you must have end-to-end functionality for correctness, the network can include an incomplete version of the feature as a performance enhancement. 
+
+
+Strong: 
+The network's job is to transmit datagrams as efficiently and flexibly as possible. Everything else should be done at the fringes...
+
+The reasoning for the strong principle is flexibility and simplicity. If the network implements a piece of functionality to try to help the endpoints, then it is assuming what the endpoints do. 
+
+In terms of long term design and network evolution, the strong end-to-end argument is tremendously valuable. The tension is that in terms of short term design and performance, network engineers and operators often don't follow it. So over time the network performs better and better but becomes harder and harder to change. 
+
+
+
+### 2-5 Error detection
+
+Networks aren't perfect, and neither are the hosts that run on them. They can introduce errors, and for a network to be able to run properly it needs to be able to detect these errors. Networks today generally use three different error detection algorithms: checksums, cyclic redundancy codes, CRCs, and message authentication codes, MACs. Each of them has very different characteristics. 
+
+At a high level, error detection looks like this. We have a payload of data. We calculate some error detection bits over that data and either append it or prepend it to the payload. 
+
+Three Error Detection Schemes
+1. Checksum adds up values in packet(IP, TCP)
+  - Very fast, cheap to compute even in software
+  - Not very robust
+2. Cyclic redundancy code computes remainder of a polynomial (Ethernet)
+  - More expensive than checksum (easy today, easy in hardware)
+  - Protects against any 2 bit error, any burst <= c bits long, any odd number of errors
+3. Message authentication code: cryptographic transformation of data (TLS)
+  - Robust to malicious modifications, but not errors
+  - If strong, any 2 messages have a 2 ^ -c chance of having the same code
+
+IP Checksum
+- IP, UDP, and TCP use one's complement checksum algorithm:
+  => Set checksum field to 0, sum all 16-bit words in packet
+  => And any carry bits back in: 0x8000 + 0x8000 = 0x0001
+  => Flip bits (0xc379 becomes 0x3c86), unless 0xffff, then checksum is 0xffff
+  => To check: sum whole packet, including checksum, should be 0xffff
+- Benefits: fast, easy to compute and check
+  => Motivated by earliest software implementations
+- Drawbacks: poor error detection
+  => Only guarantees detecting a single bit error
+  => Can detect other errors, but actual guarantees are both weak and complex
+
+Cyclic Redundancy Check (CRC)
+- Cyclic Redundancy Check (CRC): distill n bits of data into c bits, c << n
+  => Can't detect all errors: 2 ^ -c chance another packet's CRC matches
+- CRC designed to detect certain forms of errors: stronger than checksum
+  => Any message with an odd number of bit errors
+  => Any message with 2 bits in error
+  => Any message with a single burst of errors <= c bits long
+- Link layers typically use CRCs
+  => Fast to compute in hardware (details in a moment)
+  => Can be computed incrementally
+  => Good error detection for physical layer burst errors
+Diversion: CRC Mathematical Basis
+- Uses polynomial long division
+  => Consider the message M a polynomial with coefficients 0 or 1 (pad with c zeroes): eg. M = 10011101 = x^7 + x^4 + x^3 + x^2 + 1
+  => Use a generator polynomial G of degree c also with coefficients 0 or 1:
+      * Pad first term (always 1) for frustrating historical reasons
+      * eg. G = 1011 = x^4 + x^3 + x + 1
+      * USB (CRC-16) = 0x8005 = x^16 + x^15 + x^2 + 1
+  => Divide M by G, the remainder is the CRC: pick G carefully!
+- Append CRC to message M:M's = M + CRC
+  => Long division of M' with G has a remainder of 0
+
+MAC
+- Message Authentication Code (MAC)
+  => Not to be confused with Media Access Control (MAC)!
+- Uses cryptography to generate c = MAC(M,s), |c| << |M|
+  => Using M and secret s, can verify c = MAC(M,s)
+  => If you don't have s, very very hard to generate c
+  => Very very hard to generate an M whose MAC is c
+  => M + c means the other person probably has the secret (or they're replayed!)
+- Cryptographically strong MAC means flipping one bit of M causes every bit in the new c to be randomly 1 or 0 (no information)
+  => Not as good for error detection as a CRC!
+  => But protects against adversaries
+
+
+
+### 2-6 Finite State Machines 
+
+As the name suggests, a finite state machine is composed of a finite number of states. A state is a particular configuration of the system. The system can only be in one state. 
+
+If you want to be completely explicit and careful, you should specify what happens on each state for every event. But this can lead to complicated FSMs which have tons of edges. So often instead you will write down just the common cases, for ease of understanding, and have some supporting text about other transitions. Or, in some cases, it can even be acceptable to leave something undefined. The idea is that by specifying only the parts that are necessary for interoperability, you can leave the specification flexible for future exploration. As people use the protocol, they will figure out if something is important and if so can specify that extra part later. 
+
+
+
+
+
