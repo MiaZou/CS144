@@ -1,0 +1,96 @@
+### Flow Control - Stop and Wait
+
+The basic problem flow control tries to solve is when a sender can send faster than the receiver can process it.  
+
+Flow Control:
+1. Dont send more packets than receiver can process
+2. Receiver givers sender feedback
+3. Two basic approaches
+  - Stop and wait 
+  - Sliding window
+
+The edges between the states have two pieces of information, first the event that can cause a state transition and the action the protocol takes on making state-transition. 
+
+The basic algorithm is a sender sends one packet, it then waits for an acknowledgement from the receiver. When it receives the acklowledgement, it then if it has more data to send, sends another packet. If it waits for some time which is a timeout and hasn't heard an acknowledgement, then it assumes that the packet has been lost, it has left the network who's dropped on a router or was dropped to the receiver something happened and where the acknowledgement was dropped and it resends the data. 
+
+The sender's algorithm - it's waiting for data from the applications. This is where it's ready to send but the data application is not yet provided data descent. When the application calls send, the protocol sends a packet with that data or as much as you can fit in a packet, it then enters the wait for ACK state. In this state, there are two transitions. First is if it receives an acknowledgement. If the protocol receives an acknowledgement then it does nothing goes back to wait for data. If there's more data to send, it will send new data or if there's no more data to send, they will wait until the software call send. The second transition is when just a timeout, so this is the case where it has sent a packet of data but it hasn't received the acknowledgement, it's waiting and waiting and waiting in the time zones and it just tries resending. So it wants to pick the time out that it's conservative, it's pretty sure that the data or the subsequent acknowledgement has been lost, so it only has one pack in the network at any time. 
+
+Duplicates:
+1. Use I-bit counter in data and acknowledgments
+  - Receiver can tell if new data or duplicate
+2. Some simplifying assumptions
+  - Network does not duplicate packets
+  - Packets not delayed multiple timeouts
+
+
+
+### Flow Control II - Sliding Window
+
+Stop and Wait:
+1. At most one packet in flight at any time
+2. Sender sends one packet
+3. Receiver sends acknowledgement packet when it receives data
+4. On receiving acknowledgement, sender sends new data
+5. On timeout, sender resends current data
+6. Use I-bit counter to detect dulplicates
+
+Sliding Window Sender:
+1. Every segment has a sequence number (SeqNo)
+2. Maintain 3 variables
+  - Send window size (SWS)
+  - Last acknowledgment received (LAR)
+  - Last segment sent (LSS)
+3. Maintain invariant: (LSS - LAR) <= SWS
+4. Advance LAR on new acknowledgment
+5. Buffer up to SWS segments
+
+Sliding Window Receiver: 
+1. Maintain 3 variables
+  - Receive window size (RWS)
+  - Last acceptable segment (LAS)
+  - Last segment received (LSR)
+2. Maintain invariant: (LAS - LSR) <= RWS
+3. If received packet is < LAS, send acknowledgement
+  - Send cumulative acks: if received 1, 2, 3, 5, acknowledge 3
+  - NOTE: TCP acks are next expected data (e.g. ack 4 in above example)
+
+RWS, SWS, and Sequence Space
+- RWS >= 1, SWS >= 1, RWS <= SWS
+- If RWS = 1, "go back N" protocol, need SWS + 1 sequence numbers
+- If RWS = SWS, need 2SWS sequence numbers
+- Generally need RWS + SWS sequence numbers
+  => RWS packets in unknown state (ACK may/may not be lost)
+  => SWS packets in flight must not overflow sequence number space
+
+TCP Flow Control
+- Receiver advertises RWS using window filed
+- Sender can only send data up to LAR + window
+
+Sliding Window Flow Control
+- Allow a "window" of unacknowledged packets in flight
+- When acknowledgement arrives, advance window
+- Required sequence number space size depends on window sizes
+
+
+
+### Retransmission Strategies
+
+Go-back-N: one loss will lead to entire window retransmitting - faster, but wasted values to resend repeated data
+Selective repeat: one loss will lead to only that packet retransmitting - could take longer to recover all data
+
+One of the really important things is that you don't retransmit earlier than you should. It means it's not okay to say start a retransmit term based on packet one or packet two and then when two has retransmit timer fires, retransmit entire window. Because it could very would be that three, four, and five have been correctly received or assuming as it happened but you are going to retransmit them anyway. You are very aggressively putting additional packets in the network here. Inflating the number of packets that are beyong the window size. In that way, you want to be careful  about the number of packets you put in there. You have to be careful about retransmission policy. 
+
+
+
+
+### Transport Layer Recap
+
+1. TCP (Transmission Control Protocol) is used by over 95% of Internet applications. TCP is almost universally used because it provides the reliable, end-to-end, bi-directional byte-stream service that almost all applications desire. 
+2. UDP (User Datagram Protocol) is used by applications that don't need the guaranteed delivery service of TCP, either because of the application handles retransmissions in its own private way, or because the application just doesn't need reliable delivery. All UDP does is take application data and create a UDP datagram which identifies the application that the data should be sent to at the other end. 
+3. ICMP (Internet Control Message Protocol), is used to send feedback if things are going wrong. ICMP is very useful for understanding why end to end communications are not working properly. 
+4. The most important overarching Architectural Principles that guided the design of the internet, and continues to guides our thinking today - End-to-End principle. 
+  - 1) There are some functions that can only be correctly implemented at the edges or fringe of the network. 
+  - 2) The stronger version of the End to End principle says that if we can implement a function at the end hosts, then we should. The basic idea is that the network should be kept simple, streamlined with as few features to go wrong, slow things down or require upgrading. 
+
+
+
