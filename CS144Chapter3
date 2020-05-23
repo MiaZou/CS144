@@ -1,0 +1,265 @@
+### 3-0 Packet Switching
+
+Packet switching is simple in the sense that each packet is a self-contained unit of data that carries information necessary for it to reach its destination. Packet switching is efficient in the sense that it keeps a link busy whenever there is work to be done, rather than have dedicated capacity reserved for each user or application. 
+
+
+
+### 3-1 What the Internet is: A very brief history of networking and the Internet
+
+# Brief history of Networking
+Four steps of invention
+- (2,000 BC) Systems to signal a small set of pre-defined messages, eg. beacons. 
+- (1600s) Systems to transmit arbitrary messages, eg. by encoding the alphabet. 
+- (1700s) Numeric codes for common words and phrases. "Compression". 
+- (1700s) Codes for control signals. "Protocols".
+
+By the 1800 there were a number of different optical telegraph systems deployed across Europe, using a variety of different protocol signals, such as these. 
+1. Initialization
+2. Error control: erase, resend, stop/wait, selective-repeat
+3. Flow control: "faster/slower"
+
+# Brief history of the Internet
+
+1962, Licklider at MIT started to write memos and give talks about his concepts of an Intergalactic Network, in which everyone on the globe is interconnected and can access programs and data at any site from anywhere. 
+
+1964, researcher Paul Baran wrote what is now considered the first academic paper about large scale communication networks. The paper is titled: "On Data Communication networks".
+
+About the same time, Leonard Kleinrock's thesis was published on queueing theroy. 
+
+Donald Davies was working on very similar ideas at the National Physical Laboratory in the UK. 
+
+In 1965, working with Thomas Merrill, Larry Roberts connected the TX-2 computer in Mass to the Q-32 in California with a low speed dial-up telephone line creating the first wide-area computer network every built. 
+
+Larry Roberts joined DARPA in 1966 to help develop the first ARPANET plans, which were published in 1967. 
+
+In 1969 the first four nodes were installed at UCLA, SRI, UCSB and University of Utah and the very first messages sent. The internet was called the ARPANET and was a single Closed, Proprietary network. 
+
+In the early 1970s, a number of different packet-switched data networks started to appear. 
+
+In 1971, the first packet radio network was built between the Hawaii Islands, called AlohaNet. The mechanisms developed for the ALOHA protocol have influenced pretty much every wireless network ever since. 
+
+Also in 1971, the Cyclades research network was built in France. It was the first to give the end hosts the responsibility for reliable communications and heavily influenced the design of the Internet. 
+
+In 1974, IBM introduced an entire data network stack called SNA, which stands for Systems Network Architecture. Its goal was to reduce the cost of building large time-shared computers with many teletype terminals, rather than batch processing with punch cards. 
+
+DARPA sponsored work on "Internetting" to create the first "networks of networks" to connect together networks around the world. The protocols needed for Internetting were first described by Vint Cerf (Stanford) and Bob Kahn in a now famous paper in 1974, with the title: "A Protocol for Packet Network Intercommunication". TCP called for reliable, in-sequence delivery of data and included much of what we call the Network layer. By the end of 1970s, TCP and IP were separated, making room for UDP to be added as an unreliable transport service as well, originally for packetized voice. Vint Cerf and Bob Kahn are togethered considered the fathers of the Internet. 
+
+In 1983 TCP/IP was first deployed across the ARPAnet in a flag day when everyone upgraded to use the new protocols at the same time. 
+
+In 1986, NSFNET was created by the US National Science Foundation to interconnect supercomputers at universities across the US, using links running at 56kb/s. Other small networks started to pop up all over the place, connecting to the Internet. 
+
+By the end of the 1980s, there were about 100,000 connected hosts. 
+
+Around 1990 Tim Berners-Lee at CERN invented the world wide web, with the first browsers appearing in 1993 - most notably the Mosaic browser written by Marc Andreessen. 
+
+Useful References:
+1. The Early History of Data Networks - G.J.Holzmann, B.Pehrson, IEEE Press 1994
+2. The Design Philosophy of the DARPA Internet Protocols. - D.Clark, ACM Sigcomm 1988
+3. Brief History of the Internet - B.M.Leiner, V.Cerf, D.D.Clark et al.
+
+
+
+### Packet Switching - What is packet switching?
+
+Packet switching was first described by Paul Barren in the early 1960s. It describes the way in which packets of information are routed one-by-one across the internet to their destination, just like letter are delivered by the post office. When we choose to use packet-switching, it dictated many of the properties of the network. 
+
+Circuit Switching: It is the predecessor of packet switching which was used in telephone network. 
+- Each call has its own private, guaranteed, isolated data rate from end-to-end. 
+- A call has three phases:
+  1). Establish circuit from end-to-end ("dialing")
+  2). Communicate
+  3). Close circuit ("tear down")
+- Originally, a circuit was an end-to-end physical wire.
+- Nowadays, a circuit is like a virtual private wire. 
+
+Problems associated with circuit switching - it works good for phone calls, but when we're thinking about using circuit switching for the Internet or any computer communications, there are a few shortcomings that we need to considers. 
+1. Inefficient: Computer communication tends to be very bursty. E.g. typing over an ssh connection, or viewing a sequence of web pages. If each communication has a dedicated circuit, it will be used very inefficiently.
+2. Diverse Rates: Computer communicate at many different rates. E.g. a web server straming video at 6 Mb/s, or me typing at 1 character per second. A fixed rate circuit will not be much use. 
+3. State Management: Circuit switches maintain per-communication state, which must be managed. 
+
+
+Packet Switching: 
+There are no dedicated circuit to carry our data. We just send when we are ready any time we want to send a block of data by adding a header to it. That's what we call a packet. The header contains a address of where the packet is going, just like an envelope tells the post office where to send the letter. Packet switched network consists of end host, the links, and packet switches. When we send the packet, it's routed hop-by-hop from the source, all the way through destination. Each packet switch along the way is gonna look up the address in a forwarding table and send it to the next stop until it reaches final destination. There are many types of packet switchings, eg. routers or ethernet. 
+
+Packet switch has buffers. Buffers hold packets when two or more packets arrive at the same time, during period of congestion. For example, if both packets arrive at the same time. Then the packet switch has to hold one of them while it sends the other. It can't send them both at the same time, so it's going to send one at a time. And because it might have many incoming links, the packet switch has to have a buffer to hold perhaps, many, many packets. 
+
+In summary for packet switching: 
+- Packets are routed individually, by looking up address in router's local table. 
+- All packets share the full capacity of a link.
+- The routers maintain no per-communication state. 
+
+Why does the Internet use Packet Switching? 
+1. Efficient use of expensive links
+  - Links were asumed to be expensive and scarce.
+  - Packet switching allows many, bursty flows to share the same link efficiently.
+  - "Circuit switching is rarely used for data networks, ... because of very inefficient use of the links" - Bertsekas/Gallager
+2. Resilience to failure of links & routers
+  - "For high reliability, ... [the internet] was to be a datagram subnet, so if some lines and [router] were destroyed, messages could be ... rerouted" - Tanenbaum
+
+
+
+### Packet Switching: End to End Delay
+
+Useful Definitions:
+- Propagation Delay t(l) = l/c: The time it takes a single bit to travel over a link at propagation speed c.
+- Packetization Delay t(p) = p/r: The time from when the first to the last bit of a packet is transmitted. 
+
+End-to-end delay:
+The time from when we send the first bit, on the first link. It equals to the sum of the packetization delay and the time to propagate along the link. 
+Internet routers are store and forward devices, this means that switch S1 is going to wait until the whole packet arrives and look up the address and decides where to send it next. 
+The packet switching is that your packets share the links with packets from other users. When several packets show up at the same time wanting to go on the same link. Some of the packets have to wait in the router's queue (packet buffer). 
+
+Therefore, our end-to-end delay also needs to add the QI of T which is the delay of the packet in the queue waiting for other packets. 
+
+** Everything is deterministic except the queuing delay. 
+
+In summary:
+End-to-end delay is made up of three main components: 
+- Propagation delay along the links (fixed)
+- Packetization delay to place packets onto links (fixed)
+- Queueing delay in the packet buffers of the routers (variable)
+
+
+
+### Packet Switching - Playback Buffer
+
+Real-time applications (e.g. Youtube and Skype) have to cope with variable queueing delay. Basically, because the applications don't know precisely when the packets are gonna show up, they can't be sure they will have a voice or video sample in time to deliver it to the user. So they build up a reserve of packets in something called the playback buffer. 
+
+When designing playback buffer, we have to think about how far ahead we want the buffer to get. Because the variable in queueing delay, the cumulative arrivals at the laptop look a little bit different. The delay is measured by the horizontal distance which is a variable number, depending on the cuing delay encountered by each of the individual packets. 
+
+The biggest component in the delay is the propagation and packetization delay. 
+- The overall end to end delay can't be less than the packetization and propagation delay.
+- There are a lower bound and a upper bound. But the upper bounds are very very large so they are not useful. 
+- The cumulative buffers are non-decreasing. 
+- Because we know how fast, or there is an upper bound on the rate of the last link. It tells us the instantaneous arrival rate, the gradient of it, can't exceed the speed, the date rate of the link. 
+
+Summary for Playback buffer
+- With packet switching, end-to-end delay is variable
+- We us a playback buffer to absorb the variation.
+- We could just make the playback buffer very big, but then the video would be delayed at the start.
+- Therefore, applications estimate the delay, set the playback buffer and resize the buffer if the delay change. 
+
+
+
+### Packet Switching - Queue models
+
+Outline:
+1. Simple deterministric queue model
+2. Small packets reduce end to end delay
+3. Statistical multiplexing
+
+1. Simple deterministric queue model
+The queue has an occupancy of Q(t). So at time t it has Q packets or bytes in it. D(t) is the time t for a packet to depart. The cumulative arrivals A(t), the total number of packets that have arrived up until time t. And finally, the outgoing link typically has a deterministic and fixed rate, we call it R. 
+- The queue occupancy, Q of t equals ones that have arrived minus the ones that have departed. Q(t) = the vertical distance between A(t) and,m,,m  ,m ,m,m,m m,m nm,m   D(t). FIFO!
+
+2. Small packets reduce end to end delay
+Q: Why not send the entire message in one packet?
+A: If we are sending the entire message in one packet, we have to do the entire packet at once. Until the entire packet got to the first stop, it can then move into the transition to the second stop. However, if we are breaking them into smaller pieces and send each piece in one packet, we can transfer the first packet to the first stop, and while we are transfering the first packet to the second stop, we can also send the second packet to the first stop. So we are creating a pipelining effect. We got this parallelism over the links and the end-to-end delay is going to be reduced over a long network with very big messages. And this will make a very significant difference. 
+
+3. Statistical multiplexing
+- Statistical multiplexing means the egress link need not run at rate NR (N is the number of packets N and R is the link rate.
+- The buffer absorbs brief periods when the aggregate rate exceeds R.
+- Because the buffer has finite size losses can occur.
+Statistical multiplexing gain = 2C/R:
+  1). it's the benefit that we are getting from summing the two of them. 2). For a given buffer size, B, the ratio of the rates that we need in order to prevent packet loss, is the statistical multiplexing gain, and that generally will be a lower rate, because we can absorb the change. 
+Statistical multiplexing lets us carry many flows efficiently on a single link. 
+
+
+
+### Packet Switching - Useful queue properties
+
+Queues with Random Arrival Processes
+- Usually, arrival processes are complicated, so we often model them using random processes.
+- The study of queues with random arrival processes is called Queueing Theory. 
+- Queues with random arrival processes have some interesting properties. 
+
+Outline:
+1. Burstiness increases delay
+2. Determinism minimizes delay
+3. Little's Result
+4. The M/M/1 queue
+
+1. Burstiness increases delay 
+  - Example 1: Periodic single arrivals: Q(t) <= 1
+  - Example 2: Periodic burst arrivals: (N arrivals every N seconds) Q(t) = 0, 1, ... N, even with same arrival rate, so the average and end Q occupancy would be higher. 
+  - Therefore, in general, burstiness increases delay!
+2. Determinism minimizes delay
+  - In general, determinism minimizes delay. 
+  - Example: random arrivals wait longer on average than simple periodic arrivals
+3. Little's Result
+  - In any queueing system, there is a following property which is a little suprising. If we defined arrival rate - Lambda, and the average number of queues in the system - L. 
+  - ** The Little's result tells us that there is in general, the number of customers in the system, equals the average arrival rate Times the average delay of a customer thru the queue. This deceptively simple result applies for any queuing system for which there are no customers that are lost or dropped. 
+  - L, is the average number that are in the queue, plus currently being serviced, so as long as D is the average delay of customers that arrive until they've completed service. It turns out this result also holds if we say L is the average number of customers in just the queue but not yet entering the service, so as long as D also equals the average delay through the queue prior to entering the service. 
+4. The Poisson process
+  - An arrival process is Poisson if 
+    1). Pr{k arrivals in an interval of t seconds} is P(k)(t) = ((Lambda * t)^k) / k! * e ^ (-Lambda * t)
+      The probability of there being k arrivals in an interval of t seconds is given by this expression here, kind of a hairy expression but the important thing is that, we can express this as the expected number of arrivals within an interval t is simply Lambda t, where Lambda is the arrival rate. 
+    2). E[number of arrivals in interval t] = Lambda * t
+    3). Successive interarrival times are independent (i.e. not bursty).
+      Once we picked one arrival, then the next arrival is independent of the first one, and in fact, if we take sliding window and move that over the arrival process within any period, the inter-arrival times within one period are independent of the next. That means there is no burstiness or coupling of one arrival to another. 
+  - Why the Poisson process?
+    * Models aggregation of many independent random events, e.g.
+      => Arrival of new phone calls to a telephone switch
+      => Decay of many independent nuclear particles
+      => "Short noise" in an electrical circuit
+    * It makes the math easy
+
+*** Be warned!
+1. Network traffic is very bursty!
+2. Packet arrivals are not Poisson. 
+3. But it models quite well the arrival of new flows.
+
+Example of Poisson process: M/M/1 Queue
+First M stands for a Markovian arrival process which is Poisson. Second M stands for Markovian service process which is exponential, which means that the time it takes to service a packet is exponentially distributed, and each one has a service time independent of all of the others. And 1 stands for there is one server outgoing line servicing this queue. 
+
+In summary: The main queue properties are that
+- Burstiness tends to increase delay. Bursty arrivals tend to make queuing delays longer. 
+- Little's result gives us a nice relationship between the average occupancy of a queue, L, lambda the arrival rate, and D, the average delay of a customer 
+- Packet arrivals are not Poisson, but some events are, such as web requests and new flow arrivals. 
+  
+
+
+### Packet Switching - How a packet switch works(1)
+
+Outline
+1. What does a packet switch look like?
+2. What does a packet switch do?
+  - Ethernet switch
+  - Internet router
+3. How address lookup works
+  - Ethernet switch
+  - Internet router
+
+Generic Packet Switch
+
+----> [Lookup Address][Update Header] ----- [Queue Packet] ----->
+
+The three main stages of a packet switch are that when a packet arrives, the first thing that we do is look up at the address, the destination address to figure out where it's going to go next. (Looking up the forwarding table). The next thing we may need to do is to update the header (ex. router, update the TTL and update the checksum). The next thing we have to do is to queue the packet. This is because there might be some congestion. There may be many packets trying to get to the outgoing link at the same time. So we use a buffer memory to hold some packets that are waiting their turn to depart on the egress line. 
+
+Ethernet Switch
+1. Examine the header of each arriving frame.
+2. If the Ethernet DA is in the forwarding table, forward the frame to the correct output port(s).
+3. If the Ethernet DA is not in the table, broadcast the frame to all ports (except the one through which the frame arrived).
+4. Entries in the table are learned by examining the Ethernet SA of arriving packets. 
+
+Internet Router
+1. If the Ethernet DA of the arriving frame belongs to the router, accept the frame. Else drop it. 
+2. Examine the IP version number and length of the datagram.
+3. Decrement the TTL, update the IP header checksum.
+4. Check to see if TTL == 0.
+5. If the IP DA is in the forwarding table, forward to the correct egress port(s) for the next hop.
+6. Find the Ethernet DA for the next hop router.
+7. Create a new Ethernet frame and send it.
+
+Basic Operations
+1. Lookup Address: How is the address looked up in the forwarding table?
+2. Switching: How is the packet sent to the correct output port?
+
+
+
+
+
+
+
+
+
