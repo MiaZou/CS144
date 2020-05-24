@@ -255,11 +255,78 @@ Basic Operations
 1. Lookup Address: How is the address looked up in the forwarding table?
 2. Switching: How is the packet sent to the correct output port?
 
+Address lookup Methods:
+1. Ethernet lookup address methods store the addresses in hash table and look for exact match in hash table.
+2. IP lookup address methods is a longest profix match, not an exact match. (Binary tries or Ternary Content Addressable Memory(TCAM)).
+3. There is also a Generic method, ex. IP DA = X => Action is to forward to port 7, or Eth DA = Y AND IP DA = Z => Drop packet. Generalization of lookups and forwarding action in switches, routers, firewalls, etc. 
+
+Summary:
+- Packet switches perform two basic operations: 
+  => Lookup addresses in a forwarding table
+  => Switching to the correct egress port
+- At a high level, Ethernet switches and Internet routers perform similar operations
+- Address lookup is very different in switches and routers. 
 
 
 
+### Packet Switching - How a packet switch works (2)
+
+Outline
+- Switching packets to the egress port
+  => Output queueing and shared memory
+  => Input queueing and head-of-line blocking
+  => Virtual output queues
+
+Input Queued Packet Switch
+- If we move the Queue Packet from the output over to the input, we would resolve this issue. It would only have one packet in the buffer memory waiting in queue rather than possibly upto N packets. The speed is being reduced from (n+1)*R to 2R (the one waiting in queue and the time to send out in the queue). 
+- The issue for this solution is the head of line blocking. This is when we have something waiting in queue, it is blocking what's behind it which could possibly be other kind of packets. Therefore, virtual output queues are used. VOQ is used where each input maintains a separate queue for each output. Basically, we are going to have different kinds of output switch for each input queue. 
+
+Properties of Output Queue Switches
+1. They are "work conserving"
+2. Throughput is maximized
+3. Expected delay is minimized
+
+Summary:
+- Packet switches perform two basic operations:
+  => Lookup addresses in a forwarding table
+  => Switching to the correct egress port
+- The simplest and slowest switches use output queueing, which minimizes packet delay
+- High performance switches often use input queueing, with virtual output queues to maximize throughout. 
 
 
 
+### Packet Switching - Strict priorities and guaranteed flow rates
+
+FIFO output queue is a free for all queue. If there are many flows passing through the queue. Whoever sends at the highest rate or the most packets will receive the highest usage of this output link. This queue is nice and simple, encourages bad behavior, because the best thing for a flow to do is try and crowd out every other flow by sending as fast as it can. 
+
+However, this would not be good for urgent control traffic. It doesn't have any distinguish for the importance. Therefore, the max delay is B/R where B is the size of the queue and the rate of being served outgoing link is R. 
+
+Two alternatives to simplify FIFO queuing:
+1. Strict Priorities - given high priority over to others (two queues - high and low)
+2. Rate guarantees - given guaranteed fraction of the outgoing link to each of the flows. (weighted priorities)
+  => in a practival way, the time proceeds in rounds (unit of time), and if we were going to service the packets bit by bit, which round would they have finished in? The finishing time of each packet is the starting time in rounds plus the length of the packet divided by the weight ofthe one. The calculation is WFQ. Then we could deliver packets bit-by-bit depending on the finishing time
+ 
+Summary: 
+- FIFO queues are a free for all: No priorities and no guaranteed rates.
+- Strict priorities: High priority traffic "sees" a network with no low priority traffic. Useful if we have limited amounts of high priority traffic.
+- Weighted Fair Queueing (WFQ) lets us give each flow a guaranteed service rate, by scheduling them in order of their bit-by-bit finishing times. 
 
 
+
+### Packet Switching - Guaranteed Delay
+
+The end-to-end delay equation tells the delay from one end of the network to the other as a function of the packetization delay that is the fixed component of the packet length divided by the rate plus the propagation delay which the length of the link divided by the propagation delay or the speed of light plus the queuing delay. The basic idea is that if we know the upper bound on q1, q2, and q3, then we know the end-to-end delay overall from the equation. 
+
+If we know which queue this packet is going to pass through and the size of the buffer, and the rate of the service, then we would know the maximum delay that a packet can encounter through this router (WFQ). 
+
+We need to prevent the buffer from overflowing so we don't get a dropped packet where delay would not be guaranteed. 
+
+Here is how we are going to prevent: If we can guarantee that no more than B plus R1 times T where T is the time interval, then the buffer can't overflow. This is called Sigma Rho regulation. 
+
+If the leaky bucket constrained, and routers use WFQ, then end-to-end delay guarantees are possible. The leaky bucket is something that implements the Sigma Rho regulator. RSVP (the resource reservation protocol)/IETF RFC 2205 are a protocol for setting this up initially. 
+
+Summary:
+- If we know the size of a queue and the rate at which it is served, then we can bound the delay through it.
+- We can pick the size of the queue, and WFQ lets us pick the rate at which it is served.
+- Therefore, we just need a way to prevent packets being dropped along the way. For this, we use a leaky bucket regulator.
+- We can therefore bound the end to end delay. 
