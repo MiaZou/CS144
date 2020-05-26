@@ -1,0 +1,306 @@
+### 4-1 Congestion - Basic Ideas
+
+Outline:
+- What is congestion control?
+- Basic approaches to congestion control
+  => In the network
+  => From the end host
+- TCP Congestion Control
+  => TCP Tahoe
+  => TCP Reno
+  => TCP RTT Estimation
+  => Performance in practice
+
+What is congestion control?
+- Congestion can take place at multiple scales. 
+- There might be waste of network traffic if for example the packet got through the fitst link but then got dropped by the second link.
+- We want to get equal access for each sender rather than not spliting equally.
+
+Congestion is unavoidable
+1. We use packet switching because it makes efficient use of the links. Therefore, buffers in the routers are frequently occupied.
+2. If buffers are always empty, delay is low, but our usage of the network is low.
+3. If buffers are always occupied, delay is high, but we are using the network more efficiently. 
+
+Observations
+1. Congestion is inevitable, and arguably desirable. 
+2. Congestion happens at different time scales - from two individual packets colliding, to some flows sending too quickly, to flash crowds appearing in the network.
+3. If packets are dropped, then retransmissions can make congestion even worse.
+4. When packets are dropped, they waste resources upstream before they were dropped.
+5. We need a definition of fairness, to decide how we want flows to share a bottleneck link. 
+
+Fairness and throughput
+* Max-min Fairness
+  - Definition: An allocation is max-min fair if you can not increase the rate of one flow without decreasing the rate of another flow with a lower rate. 
+  => Single link is the intuitive and simple on a single link.
+
+Goals for congestion control
+1. High throughput: keep links busy and flows fast
+2. Max-min fairness
+3. Respond quickly to changing network conditions
+4. Distributed control
+
+
+
+### 4-2 Congestion - Basic Approaches
+
+Network-based congestion control:
+There is explicit feedback that comes from the routers to indicate congestion in the network. The ECN (explicit congestion nofitication) in which the routers indicate whether they have some degree of congestion. 
+
+End-host based congestion control: 
+If we are able to observe the behavior of the network such that it's enough to decide at what rate we send or how many outstanding packets we have in the network then perhaps we can implement a congestion control at the end-host. This is nice because if it's not depend on the behavior of the routers or it doesn't behave on them sending specific information back, we can evolve and adapt it over time without having to change the network in between. The example would be TCP. 
+
+TCP Congestion Control: TCP implements congestion control at the end-host:
+- Reacts to events observable at the end host (e.g. packet loss)
+- Exploits TCP's sliding window used for flow control
+- Tries to figure out how many packets it can safely have outstanding in the network at a time
+
+TCP varies the number of outstanding packets in the network by varying the window size: window size = min {Advertised window, Congestion window}
+
+AIMD - additive increase, multiplicative decrease
+- If packet received ok: W <- W + 1/W
+- If a packet is dropped: W <- W/2
+
+Summary:
+Choice: In the network, or at the end host?
+TCP controls congestion from the end-host
+  - Reacts to events observable at the end host (e.g. packet loss)
+  - Exploits TCP's sliding window used for flow control
+  - Tries to figure out how many packets it can safely have outstanding in the network at a time
+  - Varies window size according to AIMD
+
+
+
+### 4-3 Congestion - AIMD with a single flow
+
+Each time a packet is received ok, we increase the window by one over W. Therefore, once we've received the whole window's worth of packets, the window size will be increased by one. Everytime a packet is dropped, we're going to decrease the window size multiplicatively. We're going to reduce it by a factor of two.
+
+Sending rate for a single flow, the consequence of it is that the number of bytes that we send in one window, divided by the round trip time. Because the round trip time is varying with the window size, W over RTT is actually going to be a constant. W and RTT are moving lockstep. 
+
+Another observation from this is that how big should the buffer be so that the whole system will behave correctly.  
+
+Observations for single flow
+1. Window expands/contracts according to AIMD.
+2. ... to probe how many bytes the pipe can hold.
+3. The sawtooth is the stable operating point.
+4. The sending rate is constant.
+5. ... if we have sufficient buffer (RTT x C).
+
+
+
+### 4-4 Congestion Control - AIMD with multiple flows
+
+** All the AIMD does is to control the number of outstanding packets in the network. 
+
+At any one time, the router buffer has lots of packets in it from lots of different flows. It's not uncommon for a router buffer to be able to hold hundreds of thousands of packets, and they will come from many, many different flows. Any one individual flow only make up a tiny fraction of all the packets in the buffer. Imagine you have 10,000 flows sharing the buffer with room for 10,000 packets, each flow typically only has one packet in the buffer at a time. Occasionally, a packet will arrive and find the buffer full. The packet is dropped and its flow will halve its window size. With so many flows in the system, the flow will experience packet drops pretty much at random - it just depends on when a flow's packet happens to arrive and find the buffer full. 
+
+It's very reasonable to think of the RTT, the round trip time, as being essentially constant when there are many flows. There are minor fluctuations when a packet is dropped, but the rest of the time the congested buffer is full. So as a consequence, we can assume that the RTT stays constant for packets passing through the congested router. The throughput of a flow - which in each cycle is equal to its window size divided by RTT - will be directly proportional to the window size. In other words, the average throughput is the average window size divided by the constant RTT. For multiple flows, RTT, we can assume, is constant and so each horizontal step is the same length and the sawtooth is a triangle with straight edges.  
+
+Summary:
+1. Throughput of an AIMD flow is sensitive to the drop probability and is very sensitive to the RTT
+2. With many flows, each flow follows its own AIMD rule
+3. If the bottleneck contain packets from many flows, the buffer is going to remain highly occupied all the time
+4. Above implies that RTT seen by the packets is constant
+
+
+
+### TCP Congestion Control I - Slow start, congestion avoidance, triple duplicate acks
+
+The purpose of congestion control is to control how many packet the sender has outstanding in the network. The goal is to send as many packets as the network can support but not more. Sending more will cause queues to fill up and drop packets. 
+
+TCP and AIMD
+- TCP uses additive-increase, multiplicative decrease (AIMD)
+  => Maintains a congestion window, an estimate of how many unacknowledged segments can be sent
+  => Increases the congestion window by one segment every RTT
+  => Halves the congestion window (or more) on detecting a loss
+- A bit of history on why (the Internet collapsed)
+- Explaination of how it achieves and implements AIMD
+
+TCP history
+- 1974: 3-way handshake
+- 1978: TCP and IP split into TCP/IP
+- 1983: January 1, ARPAnet switches to TCP/IP
+- 1986: Internet begins to suffer congestion collapse
+- 1987-8: Van Jacobson fixes TCP, publishes seminal TCP paper (Tahoe)
+- 1990: Fast recovery added (Reno)
+
+Three Questions:
+- When should you send new data?
+- When should you send data retransmissions?
+- When should you send acknowledgements?
+
+When should you send new data?
+TCP Pre-Tahoe
+- Endpoint has the flow control window size
+- On connection establishment, send a full window of packets
+- Start a retransmit timer for each packet
+- Problem: what if window is much larger than what network can support? 
+
+Three Improvements
+- Congestion window
+- Timeout estimation
+- Self-clocking
+
+Congestion Window (TCP Tahoe)
+- Flow control window is only about endpoint
+- Have TCP estimate a congestion window for the network
+- Sender window = min(flow window, congestion window)
+- Seperate congestion control into two states
+  => Slow start: on connection startup or packet timeout
+  => Congestion avoidance: steady operation
+
+Slow Starts Benefits
+- Slow start
+  => Window starts at Maximum Segment Size (MSS)
+  => Increase window by MSS for each acknowledged packet
+- Expotentially grow congestion window to sense network capacity
+- "Slow" compared to prior approach
+
+Congestion Avoidance
+- Slow start
+  => Increase congestion window by MSS for each acknowledgement
+  => Exponential increase
+- Congestion avoidance
+  => Increase by SMS^2/congestion window for each acknowledgement
+  => Behavior: increase by MSS each round trip time
+  => Linear (additive) increase
+
+Stage Transitions
+- Two goals
+  => Use slow start to quickly find network capacity
+  => When close to capacity, use congestion avoidance to very carefully probe
+- Three signals
+  => Increasing acknowledgements: transfer is going well
+  => Duplicate acknowledgements: something was lost/delayed
+  => Timeout: something is very wrong
+
+TCP sends the new data when its sender window defined as the minimum of its congestion window in flow control window allows it to do so. The congestion window is a value a sender maintains based on the acknowledgements and timeouts it observes. 
+
+
+
+### TCP Congestion Control II - RTT Estimation, self-clocking
+
+When should you send data retransmissions?
+
+The estimating retransmission timeouts well can have a significant effect on the TCP transmission behavior. Choosing timeouts that are too long will cause TCP to stop waiting for acknowledgements. Choosing timeouts that are too short will cause TCP to back off too aggressively dropping into the slow start state. 
+
+Timeouts:
+- Round trip time estimation is critical for timeouts
+  => Too short: waste capacity with retransmissions, trigger slow start
+  => Too long: waste capacity with idle time
+- Challenge: RTT is highly dynamic
+- Challenge: RTT can vary significantly with load
+
+Pre-Tahoe Timeouts
+- r is RTT estimate, initialize to something reasonable
+- m, RTT measurement from most recently acked data packet
+- Exponentially weighted moving average: r = alpha * r + (1 - alpha) * m
+- Timeout = belta * r, belta = 2
+- The problem with this approach is that it assumes the variance of RTT measurement is a constant factor of its value. 
+
+TCP Tahoe Timeouts
+- r is RTT estimate, initialize to something reasonable
+- g is the EWMA gain (e.g. 0.25)
+- m is the RTT measurement from most recently acked data packet
+- Error is the estimate e = m-r
+- r = r + g * e
+- Measure variance v = v + g(|e| - v)
+- Timeout = r + belta * v (belta = 4)
+- Expotentially increase timeout in case of tremendous congestion
+
+When should TCP send acknowledgements?
+- with little delay as possible
+
+Self-Clocking
+- If TCP sends acknowledgements aggressively then it turns out they will space out in time according to the throughput of the bottle net link. The sender will receive acknowledgements have spaced out over time. Since the sender will send new data as soon as the sender window advances, it will send segments at the rate that the bottleneck and late link can support. 
+- Additonal benefit - TCP only puts new packets into the network when it receives an acknowledgement when one of its existing packets has left the network. From the congestion standpoint, TCP is keeping the number of outstanding packets that is the utilization of accusing capacity in the network stable. 
+
+Self-Clocking Principle
+- Only put data in when data has left
+  => Want to prevent congestion -- too much data in network
+- Send new data in response to acknowledgements
+- Send acknowledgements aggressively -- important signal
+
+
+
+### Congestion Control III - Performance improvements: fast retransmit and fast recovery
+
+Three Mechanisms
+  - Fast retransmit (TCP Tahoe): don't wait for a timeout to retransmit a missing segment if you receive a triple duplicate acknowledgement
+    => Only drop back to slow start state on a timeout
+  - Fast recovery (TCP Reno): halve the congestion window (don't see it to I) on triple duplicate acknowledgements
+  - Fast recovery (TCP Reno): while in fast recovery state, inflate the congestion window as acknowledgements arrive, to keep data flowing
+    => Each duplicate ack increases congestion window by 1
+    => If the old window is c, then the new window is c/2
+    => Receiving c acks will increase window size to 3c/2 -- can send c/2 new segments
+
+TCP Tahoe: On timeout or triple duplicate ack (implies lost packet)
+  - Set threshold to congestion window/2
+  - Set congestion window to 1
+  - Retransmit missing segment (fast retransmit for triple duplicate ack)
+  - Enter slow start state
+
+TCP Reno: Same as Tahoe on timeout, on triple duplicate ack
+  - Set threshold to congestion window/2
+  - Set congestion window to congestion window/2 (fast recovery)
+  - Inflate congestion window size while in fast recovery (fast recover)
+  - Retransmit missing segment (fast retransmit)
+  - Stay in congestion avoidance state
+The major difference between Tahoe and Reno is fast recovery!
+
+Congestion Window Inflation
+  - Problem: it takes a full RTT for a fast retransmitted packet to advance the congestion window
+  - Could put more packets into network
+  - Solution: congestion window inflation
+    => While in the fast recovery state (haven't received new acknowledgements), increase congestion window size by 1 for each duplicate acknowledgements,
+    including the initial 3
+    => This happens after halving congestion window size (cwnd(new) = cwnd(old)/2)
+    => End result: after one RTT, cwnd(new) is 3*cwnd(old)/2 but since no new acks yet, this results in sending cwnd(old)/2 new packets
+
+Congestion Control
+  - One of the hardest problems in robust networked systems
+  - Basic approach: additive increase, multiplicative decrease
+  - Tricks to keep pipe full, improve throughput
+    => Fast retransmit (don't wait for timeout to send lost data)
+    => Congestion window inflation (don't wait an RTT before sending more data)
+
+
+
+### Congestion Control IV - Why AIMD
+
+Congestion Control
+  - Service Provider: maximize link utilization
+  - User: I get my fair share
+  - Want network to converge to a state where everyone gets I/N
+  - Avoid congestion collapse
+
+The optimal congestion window size is the bandwidth-delay product
+
+Chiu Jain Plot: 
+A way to think about how a congestion window works over time, or how pairs of congestion windows work over time is called a Chiu Jain Plot. This is the first idea laid out that why AIMD is a good idea in a nice graphical way. So two flows that are competing for the network. Plot the rate of flow A based on its congestion window size and rate of the X axis, and the rate of flow B on the Y axis. If the network is fair, A would be equal to B. If we are maintaining the service provider requirement, we are actually running the network at capacity, then it should be A plus B, the sum of the two flows, is equal to the capacity of the network. So we would like congestion control algorithm that causes starting wherever we are on this plot, pick some random point, is going to cause flow A and flow B to gravitate towards the desired point in the center where we are fair and efficient while fully utilizing the link.  
+
+
+
+### Reading an RFC
+
+History (RFC 2555)
+  - RFC I: "Host Software"
+    => "Mindful that our group was informal, junior and unchartered, I wanted to emphasize these notes where the beginning of a dialog and not an assertion of control".
+  - Standardization of format
+    => Structure, Intellectual property rights, terminology (RFC 2119)
+    => Security, IANA
+  - Many kinds of RFCs: proposed standard, standards-track, informational, experimental, best current practice (BCP)
+
+RFC Process (simplified)
+  - Start with a draft: draft-levis-roll-trickle-00
+  - Revisions: draft-levis-roll-trickle-XX
+  - Accepted by working group: draft-ietf-roll-trickle-00
+  - Revisions: draft-ietf-roll-trickle-XX
+  - Accepted by working group chair for publication
+  - Working group, IETF last call
+  - IESG review (Internet Enduring Steering Group)
+  - Approved as an RFC
+
+Terminology:
+  - MUST, REQUIRED, SHALL: absolute requirement
+  - SHOULD, RECOMMENDED: "mean that there may exist valid reasons in particular circumstances to ignore a particular item, but the full implications must be understood and carefully weighed before choosing a different course."
+  - MAY, OPTIONAL: "mean that an item is truly optional."
