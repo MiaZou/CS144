@@ -1,0 +1,410 @@
+Chapter 5: Applications and NATs
+
+### 5-1 Network Address Translation
+- The basics of network address translation and how network address translator or NAT works. 
+
+Strong End-to-End argument: "The network's job is to transmit datagrams as efficiently and flexibly as possible. Everythig else should be done at the fringes."
+
+Network Address Translator(NAT) was first specified in RFC 1631. Almost all wireless routers today are NATs. The idea is that you connect the wireless router to the internet connection, the ISP gives you a single IP address. NAT provides a limited kind of firewall protection by hidding your IP addresses behind NAT so it would be hard for adversaries or attackers to start opening connections to machines. 
+
+How a NAT works?
+  - The basic model is the NAT doesn't create a mapping generally until it gets a request from inside. When the NAT sees packets, destined to the external, to nodes on the external interface, from nodes on its internal interface. In response to those packets, it might generate a mapping. 
+
+
+
+### 5-2 Types of NATs
+
+NAT Internal Mapping 
+  - the model of a NAT is when there's some kind of communication from a node behind the NAT to an external node on the internet, the NAT sets up an internal mapping between the NAT internal IP address and associated port to external IP address and port. 
+
+Two Basic Questions:
+1. What packets does a NAT allow to traverse mappings?
+2. How and when does a NAT assign mappings?
+3. NAT terminology/classification in RFC3489
+
+Full Cone NAT: the one plays the nicest. It is the least restrictive in terms of what packets it allows to traverse a mapping. The basic model of full cone Nat is that any packet comes into the NAT to the IP address/port pair will be translated to the internal IP address/port pair, regardless of what the source address and source port are. Therefore, the NAT would do the translation. 
+
+Restricted Cone Nat: It filters based on the source IP address. The NAT will translate packets that come from the same source address as intended on the external mapping. So when the NAT sets up the mapping between the internal address in port pair and the external address in port pair, it includes the address of the other end point. It will filter based on the IP address but not the port. 
+
+Port Restricted NAT: It behaves like a restricted cone, but it also filters on port. 
+
+Symmetric NAT: port restricted, and the packet comes from the same source address and port internal to the NAT that are going to different destination addresses and ports are given different external adddress port mappings. 
+
+NAT Behavioral Recommendations
+  - More complications: static mappings, triggers, more complex behaviors
+  - TCP recommendations: RFC5382
+  - UDP recommendations: RFC4787
+  - Hairpinning: packet from internal address to external address translated properly (internal mapped to external) - the model is that the communication go back through the device, sort of like a hairpin, it comes back from telephony networks, as the terminology.
+
+
+
+### 5-3 NAT Implications
+
+First implication to application of a network address translator is that generally speaking coming connections you can't have an incoming connection. 
+
+Rendezvous service or relays are used to connect two internal connections. If we want to have two internal connections connect directly, one of the appications is NAT hole-punching. 
+The basic idea of NAT hole-punching is that there are two clients sitting behind the NAT, one client sends the traffic to the server and get the other client's public IP address and port pair, and then it could diverse the NAP mapping. This can only happen when they are full cone NAT. 
+If they are not full cone NAT, the server could tell the clients what the public address port pair of the other client is, and then they could send traffic to each other simultaneously. 
+  - Those applications could not work for a symmetric NAT. 
+
+NAT Debate
+  - Tremendously useful
+    => Reuse addresses
+    => Security (not opening connections can be good!)
+  - Tremendously painful
+    => Large complication to application development
+    => Speak Freely (pre-Skype VoIP!)
+  - Debate interesting but pointless: NATs are here to stay
+
+
+
+### 5-4 NAT Operation Details
+
+UDP is specified in RFC4787
+  - A NAT must have an "Endpoint-Independent Mapping" behavior - NAT cannot be symmetric. The mapping a NAT creates, between an internal IP address port, and an external IP address port must be independent of what the end point is. It can't be a symmetric NAT where it sets up a new mapping for every external, IP address and port. 
+  - NATs recommended to have an "IP address pooling" behavior of  "Paired". If a NAT have multiple external addresses and the idea is that the UDP packets coming from the same internal IP address, should appear to have the same external IP address. 
+  - A NAT must not have a "Port assignment" behavior of "Port overloading".
+
+TCP is specified in RFC5382
+  - A NAT must have an "Endpoint-Independent Mapping" behavior - NAT cannot be symmetric.
+  - A NAT must support all valid sequences of TCP packets.
+  - It's recommended that a NAT have an "endpoint-independent filtering" behavior for TCP. 
+  - A NAT must not respond to an unsolicited inbound SYN packet for at least 6 seconds after the packet is received. 
+
+
+
+### HTTP - HyperText Transfer Protocol
+- HTTP is the cornerstone of the modern Internet. It was originally used to transfer documents, and now used for so much more, such as streaming media from companies like Netflix and applications through scripts that your browser downloads and runs. 
+
+Hypertext is a document format that lets you include formatting and content information in a document. Whenever you download a web page, you're downloading a hypertext document. Hypertext, unlike Microsoft Word or PDF, it is all ASCII text. There is one way that a hypertext document is more than just formatting. You can embed documents, or files, inside other files. For example, an image displayed on a web page. The image aren't stored in this hypertext document. That wouldn't be human readable ASCII text. Instead, there is a way to, in hypertext document, say "load this other document and put it there". 
+
+World Wide Web (HTTP)
+  - In HTTP, a client opens a TCP connection to a server and sends commands to it. The most common command is GET, which requests a page. HTTP was designed to be a document-centric way for programs to communicate. The server receives the request, checks if it's valid and the user can access that page, and sends a response. The response has a numeric code associated with it. Ex. a "200 ok" response means the server accepted and the rest of the response has the document data. There are other kinds of response such as PUT, DELETE, and INFO, as well as other responses such as 400 Bad Request. Like Hypertext, HTTP is all in ASCII text, it's human readable. 
+  - One important to note is the "If-Modified-Since" header in the request. This is a way for the client to tell the servet to only give the document if it's been modified since that time. If the document has been modified since that timestamp, the server responds with a 200 OK with a new copy of the document. Otherwise it responds with a 304 Not Modified. This header is useful when your client caches pages, which most web browsers do. Rather than transfer the same document again, the client can tell the server to transfer it conditionally. If the server responds with a 304, the client can just use its cached copy. 
+
+HTTP
+  - Cornerstone application protocol of modern Internet
+  - Text protocol, human readable
+  - Request/response API
+  - Document-centric
+
+HTTP/1.0
+  - Open connection
+  - Issue GET
+  - Server closes connection after response is complete
+
+HTTP/1.0 speed
+  - Latency: 50ms
+  - Request size: 1 full segment
+  - Reponse size: 2 full segments (size of slow start window)
+  - Segment packetization delay: 10ms (request and response), full duplex
+  - Maximum open connections: 2, teardown is instantaneous
+
+
+
+### HTTP/1.1 Keep Alive - HyperText Transfer Protocol
+
+For HTTP/1.0, if we could request more documents at once, it could be faster. The approach can be really wasteful. Clients spend a lot of time opening connections, furthermore, the TCP congestion doesn't get a chance to grow, since each connection has a new window. 
+
+HTTP/1.1 solves this problem.
+  - Added Connection header for requests
+    => keep-alive: tells the server "please keep this connection open, I'll request more"
+    => close: tells the server to close the connection
+    => Server can always ignore
+  - Added Connection header for responses
+    => keep-alive: tells the client it'll keep the connection open
+    => close: tells the client it's closing the connection
+  - Added Keep-Alive header for responses
+    => Tells client how long the connection may be kept open
+
+HTTP/1.1 has been around for a while, since 1997 or so. Google has developed a new protocol, called SPDY.
+  - Protocol proposed by Google to speed up the web
+  - Request pipelining
+  - Removes redundant headers
+  - Becoming basis of HTTP/2.0
+
+
+
+### 5-5 BitTorrent - Swarms, Rarest-First and Tit-for-Tat
+
+BitTorrent allows people to share and exchange large files. A BitTorrent client requests documents from other clients, so that a single client can request from many others in parallel, BitTorrent breaks files up into chunks of data called pieces. When a client downloads a complete piece from another client, it then tells other clients it has that piece so they can download it too. These collections of collaborating clients are called Swarms. So we are saying a client join or leave a swarms.
+
+Torrent File
+  - Torrent file (.torrent) describes file to download
+    => Names trackers, server tracking who is participating
+    => File length, piece length, SHAI hashes of pieces
+    => Additional metadata (who created torrent, etc.)
+    => Also specifies tracker
+  - Client contacts tracker, starts communicating with peers
+  - "Trackerless" torrents use something called a DHT (distributed hash table)
+    => Information on swarm stored across many nodes
+    => A distributed coordination mechanism
+  - BigTorrent breaks a file up into N pieces
+    => For throughput, pieces are large: 256kB-1MB
+    => For latency, broken into subpieces
+  - Hashes of pieces in torrent provide end-to-end integrity
+    => Hash computes a short summary of a piece
+    => Cryptographically strong hashes: hard to create a piece of data that has a particular hash (more in security lectures)
+    => HBO's Rome series: blacklisting peers
+
+What to Say?
+- Peers exchange metadata on what pieces they have
+- Download rarest pieces: rarest first policy
+- When down to the last few pieces, ask for them from multiple peers
+
+Whom to Talk to?
+- Use Tit-for-Tat(TFT) policy: upload data to peers that give you did
+- Most peers are "choked" and get no data
+- Order unchoked peers by download rate, choke all but P best (e.g., 4)
+- Occasionally unchoke a random peer (might find way into P best)
+
+BitTyrant
+  - Can you game the BitTorrent Tit-for-Tat system?
+  - Many peers give more than they take
+    => Give a peer just enough that it unchokes you
+    => Convince as many peers as possible to unchoke you
+    => Share capacity across more peers rather than given each peer more
+  - Leads to a 70% median performance gain!
+
+Summary:
+  - Torrent file (.torrent) describes file to download
+  - File broken into pieces, each with a SHA I hash
+  - Client finds peers through a tracker or DHT
+  - Clients connect over TCP/IP
+  - Clients exchange metadata on what pieces they have
+  - Clients try to download rarest-piece-first
+  - Clients "choke" most peers, send data to P best peers: tit-for-tat
+
+
+
+### 5-6 Domain Name System (DNS)
+
+A URL has three parts: 
+Application protocol and port (ex.http), Host(ex.youtube), and File(ex.labs/sc.html)
+
+People realisze that human readable names were useful even from the beginnings of the Internet. So way back when internet was tiny, there was a file called hosts.txt and turns out that every single host on the internet was in this file hosts.txt, and it was maintained by the Network Information Center. 
+
+HOSTS.TXT
+  - Originally, all hosts were in a file HOSTS.TXT, maintained by Network Information Center
+    => Maintained at SR:SRI-NIC.ARPA, 26.0.0.73 (RFC952)
+  - Hosts periodically used a file transfer protocol to download new version
+    => Requires n^2 network capacity, does not scale well
+
+Domain Name System
+  - Map names to addresses (more generally, values)
+  - Must be able to handle huge number of records
+  - Must have distributed control: people can control their own names
+  - Must be robust to individual node failures
+
+Design
+  - Two properties make DNS design feasible
+    => Read-only or read-mostly database: hosts look up names much more often than update them
+    => Loose consistency: changes can take a little while to propagate
+  - Two properties allow extensive caching
+    => Look up a name, keep result for a long time
+
+One of the requirements is that names be hierarchically administered, so that you can distribute the administration of names. To accomplish that, DNS uses a hierarchy of names and we're all familiar with it. 
+
+.
+edu                  com            org        us     fr       cn
+standford  berkeley  cisco  Google  ietf  acm  yahoo  lemonde  baidu
+cs  www    cs               maps
+           www
+
+DNS Servers
+  - Hierarchical zones ("root" zone, edu, standford, scs)
+  - Each zone can be separately administered
+  - Each zone served from several replicated servers
+  - Root zone: 13 servers, highly replicated (a, b, c, ... m)
+    => Bootstrap: root server IPs are stored in a file on name server
+    => Replicated through anycast (discussed in later course)
+
+A DNS Query
+  - Two types of queries
+    => Recursive
+    => Non-recursive
+    => Specified by bit in query
+  - UDP port 53
+    => 512 byte message limit
+  - Can use TCP port 53
+    => Prefix messages with 16-bit length field
+
+
+
+### 5-7 DNS: Queries and Resource Records
+
+Resource Records
+  - All DNS information represented in Resource Records(RRs):
+    name [TTL] [class] type rdata
+    => name: domain name (e.g., www.stanford.edu)
+    => TTL: time to live (in seconds)
+    => class: for extensibiity, usually IN 1 (Internet)
+    => type: type of the record
+    => rdata: resource data dependent on type
+  - Two critical RR types: A (IPv4 address) and NS (name server) records
+  - dig tool
+
+DNS Message Structure (RFC1035)
+  - Header: describes overall, what's in the message
+  - Question
+  - Answer (Empty in queries)
+  - Authority (Empty in queries)
+  - Additional (Empty in queries)
+
+DNS is often doing is that they are sending a response with a whole bunch of extra data just to prevent you from asking other query. 
+
+The header is 12 bytes long. The first two bytes are an ID so can pair queries and responses. The second two bytes are a bunch of flags.
+  - QR: 0 = query, 1 = response
+  - OPCODE: 0 = standard query
+  - RCODE: error code
+  - Flags
+    => AA: authoritative answer
+    => TC: truncated
+    => RD: recursion desired
+    => RA: recursion available
+Then after the first four bytes, there are four two byte values which say how many resource records are there in each sections. Ex. how many queries are, how many authorities are... Each of those four sections, there are resource records which is pretty simple. It has a name which could be a variable number of bytes long. There is a type, class, TTL within an RD length field specifying the R data. 
+
+DNS Name Compression
+  - Names can be long and repeated several times in a packet
+    => Query/answer
+    => NS record/A record
+  - Break names into labels: www.stanford.edu is www.stanford, and edu
+  - Each label is encoded as length, text: 3www, 8stanford, 3edu
+    => Length is binary
+    => Text is ASCII: 3www is 0x0377 0x7777
+  - If length >= 192, next 14 bits specifies offset in packet of name
+    => 0xc00c means name is at offset 0xc00c-0xc000 = 0x0c = 12
+
+DNS A Record Example:
+name: market.scs.stanford.edu, this might be compressed
+address record: 1 (A)
+internet: 1 (IN)
+TTL: 3600
+length of Rdata: 4 (bytes)
+overall record: 0xab 0x42 0x03 0x0a
+
+DNS NS Record Example:
+name: scs.stanford.edu (compressed)
+address record: 2 (NS)
+internet: 1 (IN)
+TTL: 3600
+length of Rdata: 10 (bytes)
+compressed data: mission.scs.stanford.edu (scs.stanford.edu compressed)
+
+
+
+### DNS Details
+
+Traversing Zones
+  - Bootstrap: local name server has a root cache file (specifies root servers)
+    => Starting set of name/address mappings to query
+  - Recursion: how do you get the address of name servers?
+    => Remember, NS records have host names
+    => argus.stanford.edu is the name server for stanford.edu
+    => How do you contact argus?
+  - Solution to recursion: glue records, A records in parent zone
+    => The .edu name servers have NS records for stanford.edu
+    => The .edu name servers also have A records for argus.stanford.edu
+
+MX Records - mail exchange record
+  - Mail eXchange record -- tell you mail server for a domain
+    name [TTL] [class] MX preference mail-server-name
+  - Can't ping scs.stanford.edu, but you can send email to scs.stanford.edu
+  - MX records cause A record processing for mail-server-name
+  - Example: dig mx scs.stanford.edu
+  - What if mail-server-name does not have an A record?
+    => dig max bad-mx.scs.stanford.edu
+
+Many Other Kinds of Records
+  - SOA: Start of Authority
+  - TXT: arbitrary text (great for extensions)
+  - PTR: map address to name
+  - AAAA: IPv6 address records
+
+
+
+### 5-8 Dynamic Host Configuration Protocol (DHCP)
+
+Communicating with IP
+  - Need three things (plus one)
+    => IP address
+    => Subnet mask
+    => Gateway router
+    => A DNS server IP address is also useful (but not necessary for IP)
+  - Problem: how do we get these values
+
+In the Old Days
+  - Your system administrator gives them to you
+    => "Type these values into your network configuration control panel..."
+    => did Brown in 1995 (stopped after a few years)
+  - Many problems
+    => Doesn't work if machine moves
+    => How long does it last? - shorter period of time (usually 1 year)
+    => Garbage collection - good for one year, but might not need it for that long, so it became trash for the rest of the time. 
+
+DHCP
+  - Dynamic Host Configuration Protocol (DHCP), RFC 2131
+  - A machine can request configuration from a DHCP server
+    => Movement: just request configuration again
+    => Configuration has a duration: a "lease", which can be renewed
+    => Garbage collection: when lease expires
+  - Discover, offer, request, ack, release
+
+Communicating Without IPv4
+  - UDP ports 67 (server) and 68 (client)
+  - Broadcast IP address: 255.255.255.255
+  - Use relays to forward across links
+
+
+
+### Unit 5: Applications - NATs, DNS, HTTP, and BitTorrent (Recap)
+
+Network Address Translation
+  - A NAT maps between an internal address/port pair and an external one
+    => Allows multiple hosts behind a NAT to share an external IP
+    => What all home routers/wireless routers do today
+  - NATs do not allow arbitrary incoming connections/packets
+  - Question: how to filter packets destined to an external address/port?
+    => Full cone, restricted cone, port restricted
+  - Traversing NATs
+    => NAT hole punching, simultaneous open
+  - Implication: no new transport protocols
+
+DNS
+  - Uses UDP
+  - Critical infrastructure of modern Internet: but just an application
+  - Maps names (www.stanford.edu) to records
+    => A records, NS records, AAAA records, MX records, SRV records...
+  - Hierarchical: distributed administration and control
+  - Read-mostly database, reasonably slow changing
+    => Heavy caching through TTLs
+    => Ask a shared resolver, resolver stores responses
+  - Bootstrap process through "root servers"
+
+HTTP
+  - Uses TCP
+  - HTTP/1.0 in 1995, HTTP/1.1 in 1996
+    => Request/response protocol
+    => ASCII text: method, headers, body
+  - HTTP/1.1 added Connection: keep-alive
+    => Many resources over a single connection
+    => TCP window grows, fewer handshakes
+  - Estimating download times
+  - SPDY: basis for HTTP/2.0
+    => Mush more efficient protocol
+    => Allows request pipelining
+
+BitTorrent
+  - Uses TCP
+  - System to share large (> 100 MB) files among many peers
+  - Clients find each other through a tracker or a DHT
+  - Clients request data using rarest-first policy
+  - Client send data using tit-for-tat algorithm
+    => Only send data to P peers who are sending the most
+    => Periodically try sending a new peer
+
+Applications
+  - Seen three major applications and network address translators, which greatly affect applications today
+    => DNS uses UDP as transport
+    => BitTorrent and HTTP use TCP as transport
+  - Complex applications from simple transport primitives
