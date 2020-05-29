@@ -1,0 +1,386 @@
+Chapter 6 Routing
+
+What if each packet contained a list of all the routers that it was going to pass through, and then found it's own way through the network, just with the state entirely contained within the packet. This is source routing and it is considered inefficient and potentially a security loophole. 
+
+Internet uses forwarding tables. Each router contains a forwarding table. For each destination prefix, it tells which path or which next hop to send a packet to. 
+
+How do we populate the forwarding tables?
+  - We use a algorithm runs as a distributed algorithm so that the routers can come to a conclusion as to the entries that they will put in those forwarding tables. The basic approach is that the routers will build a spanning tree which is a tree has no loop. It is spanning and provides a way for every source to reach a given destination. The root of the tree is the destination, and the leaves are all of the other sources, so that they can send on the spaning tree to reach that destination. 
+  - Two algorithms to build the spanning tree
+    => Bellman Ford Algorithm, aka a distance vector algorithm
+    => Alternative is now more widely used is called Dijkstra's algorithm. It's known as a link state algorithm. 
+  - The routing between autonomous systems uses a different protocol - BGP, or the Border Gateway Protocol. The autonomous systems don't want to expose what the internal system is like, so doing the shortest path can be tricky. So, BGP adds some additional mechanisms, knowing the path the packet is actually going to take, in order to allow autonomous systems to hide the internaals while giving enough information that routers can pick loop-free paths. 
+
+
+
+### 6-1 Routing - Basics
+
+The basic problem that we're trying to solve when routing packets, is how should packets be routed from A to B? Should the packet be picked up by the end host, by the network in the middle, or some other entity? Also, what path should they take? The shortest path? The least congested path? A randomly picked path? The safest and most reliable path? Does it matter? 
+
+- Approaches 
+  => Flooding
+  => Source routing
+  => Forwarding table
+  => Spanning tree
+- Metrics
+- Shortest path spanning trees
+- Other types of routing
+  => Multipath
+  => Multicast
+
+Flooding is the simplest way to make sure at least one copy of a packet is delivered to every destination in the network and therefore to the destination that its wanting to go to. With flooding, each router is going to forward the packet to every interface, except the one that is coming from. There might be times that it is going in a looping. But, we can make sure there is one case that every packet will be delivered at least once to every leaf. It will therefore reach every destination. 
+  - This is very inefficient. 
+  - It's common to use a hop count or a time to live field to stop packet looping forever. 
+  - It's nice and simple. It requires no state in the router. 
+  - It is used when we don't know or can't trust the topology. 
+
+Source Routing is when the source populates the packet with the sequence of hops that it will visit along its path. The source knows the topology, it knows the order in which it wants the routers to be visited, and it's giving the final destination to make sure that it works and reaches the destination. This is an example of end-to-end solution which 
+  - needs no support from network. The end host is has heavy works. 
+  - The packet carries a variable (and maybe long) list of addresses. 
+  - End host must know the topology and choose the route. 
+  - Used when end user wants to control the route. 
+
+Forwarding Table is used through the network to route the packets hop by hop. We are using a forwarding table to decide where the packet will go next. It's an optimization in the sense that although we could correctly have the behavior work by populating the packets with the route using source routing, we decided to have the network take on these functions to optimize it because it's such a common function, common to everybody that's using the network. 
+  - An optimization: Network handles hop-by-hop routing.
+  - Requires population of forwarding tables.
+  - Per-destination state, not (necessarily) per-flow state.
+
+Spanning Tree is spanning in the sense that it reaches all the leaves and it's a tree in a sense that it has no loops. So we want to make sure it can reach every destination or every source can reach a particular destination, and we want to make sure that there are no loops. This would be implemented by populating the routing, the forwarding table at each leaf. So the spanning tree is used that we can create the routing entries so that we can populate the forwarding tables and therefore route paths along that spanning tree. When calculating the spanning tree, we need to know what our objective is, or what our matrics of success are. Choices includes 1) Minimize the distance (geographically), 2) Minimize hop-count, 3) Minimize delay, 4) Maximize the throughput, 5) Least loaded path, 6) Most reliable path, 7) Lowest cost path, 8) Most secure path, etc. Or I could use a combination of those. So we start by creating an annotated graph with whatever cost metric we've chosen. We could represent the metrics cost for using a link. 
+  - So to calculate the route, the routes are going to exchange information with each other about the current topology as they know it. This is the job of routing algorithm or the routing protocol. In some cases, the route is wrapped in with the exchange of the state itself. In other cases, it's separate. 
+
+Multipath - the downside of the shortest path spanning tree is that some links can become very popular and could become congested. So we could spread the packets to a destination over multiple paths in order to spread the load over the network. 
+
+Multicase - In some applications, an end host might want to send packets to a set of hosts, such as broadcast or radio station. So, while we can send each packet one at a time to its destination, we could also use  graph structure of the network to do the replication for us. 
+
+Summary:
+  - There are several ways to route packets across a network, starting with the simplest method, flooding.
+  - In practice, we use routing algorithms (aka routing protocols) to calculate routes.
+  - Often, the algorithms calculate the minimum cost spanning tree to the destination. 
+  - Other types of routing include: multipath to spread load over links, and multicast to deliver to multiple end hosts. 
+
+
+
+### 6-2 Routing - Distance Vector Protocol: Bellman Ford algorithm
+
+Distance Vector Protocol is a way in which the routers maintain a vector of their distances to a given, or to all of the other routers, and then iteratively, through a distributed algorithm, they converge on finding the shortest path or the lowest cost spanning tree from them to every other router. 
+
+Problem: How can routers work together to find the minimum cost spanning tree?
+  
+The Distributed Bellman-Ford Algorithm 
+  ex. find min-cost spanning tree
+  - Assume routers know cost of link to each neighbor
+  - Each router is going to maintain the current lowest value cost C to the destination router. 
+  - Vector C = (C1, C2, ...CN) is the distance vector to destination router RN.
+  - Initially, set C = positive infinity.
+    1. After T seconds, Ri sends Ci to its neighbors.
+    2. If Ri learns lower cost path, update Ci.
+    3. Repeat.
+
+Q: What is the max run time of the algorithm?
+  - It's the longest loop free path. It's the hop count of the longest loop free path. 
+Q: Will the algorithm alwyas converge?
+  - Intuitively, it's actually pretty clear that it must converge, because we start out with the values infinity, and we only ever replace them with lower values, and we keep reducing the value until the algorithm has run. 
+Q: What happens when link costs change, or when routers/links fail?
+  - "Bad news travels slowly" - If one link break, it might not able to converge bad information.
+  - Counting to Infinity Problem
+    => Solutions
+      1. Set infinity = "some small integer", stop when count = 16.
+      2. Split Horizon: Because one of the router received lowest cost path from neighbor, it doesn't advertise cost to neighbor.
+      3. Split-horizon with poison reverse: R2 advertises infinity to R3
+      4. There are many problems with (and fixes for) the Bellman-Ford algorithm.
+
+
+
+### 6-3 Routing - Link State Protocol: Dijkstra's shortest path first algorithm
+
+This is an example of a link-state protocol where the routers start by flooding to each other all the information about the topology of the network: which links are there, which links are up, which ones are down. And then from there each router is going to calculate its shortest path tree it to every other router. 
+
+1. Exchange link state: A router floods to every other router the state of links connected to it. 
+  - Periodically
+  - When link state changes
+2. Run Dijkstra: Each router independently runs Dijkstra's shortest path first algorithm. 
+Each router finds min-cost spanning tree to every other router. 
+
+Q: How long does the algorithm take to run?
+  - By the end of the Kth iteration, we've added K routers to the graph. So if we have n routers to start with, it will always terminate after exactly n iterations. 
+Q: What happens when link costs change, or when routers/links fails?
+  - Everytime there is a change in the link state, everytime the link goes up or down, the routers are going to flood that state to every other router in the network. They then rerun Dijkstra's algorithem, calculate the lowest cost spanning tree out to every other router, and we're back up and going again. 
+
+
+
+### 6-4 Routing - Routing in the Internet
+
+Outline
+  - Hierarchy and Autonomous System (AS)
+  - Interior Routing Protocols
+  - The structure of the Internet
+
+Hierarchy in the Internet
+  - When we learned about distance vector and link stage algorithms, we were considering the network to be a single collection of routers. The Internet is made up of millions of routers interconnecting over a billion different users. For reason of scale, we need to decompose routing into smaller set. For scale with a large number of routers, the sheer scale of exchanging routing information between the routers and keeping it up to date makes it too hard. 
+  - Therefore, the decomposition takes place into different autonomous systems. 
+    => Single-exit or stub autonomous system. There is one exit point。 Within the autonomous system, the system is free to pick its own interior routing protocol. 
+    => Multi-exit or multi-exit autonomous system.
+
+Autonomous Systems
+  - The basic unit of hierarchy in the Internet
+    => Within an AS, the owner decides how routing is done
+    => Between AS's, must use BGP-4 (Border Gateway Protocol, v4)*
+  - Finding an AS number
+    => Query DNS to find IP address at Stanford: dig stanford.edu
+        Returns: "stanford.edu  1900 IN A 171.64.13.26"
+    => Find AS for IP address: nc whois.cymru.com 43
+        Enter: 171.64.13.26
+    => Stanford (32), AT&T(797), Google(15169, 22859, 36039)
+    => traceroute -a <destination> will report AS numbers.
+
+Interior Routing Protocols
+  RIP
+    - Uses distance vector (distributed Bellman-Ford algorithm).
+    - Internet RFC 2453
+    - Updates sent every 30 seconds
+    - No authentication for updates
+    - Originally in BSD UNIX, routed
+    - Widely used for many years; used less now
+  OSPF
+    - Link-state updates sent (using flooding) as and when required
+    - Internet RFC 2328
+    - Every router runs Dijkstra's algorithm
+    - Authenticated updates
+    - Autonomous system may be partitioned into "areas"
+    - Widely used, complex
+  IS-IS (RFC1142) is similar, and is also widely used.
+
+Routing to a single exit point
+  - There is only one exit point, so routers within the AS can use default routing
+    => Each router knows all prefixes within AS
+    => Packets for another AS are sent to the default router
+    => Default router is the border gateway to the next AS
+  - Routing tables in single exit AS's tend to be small
+
+Routing to multiple exit points
+  - Used by multi-homed enterprises and transit AS's
+  - Each internal router must be told which exit point to use for a given destination prefix
+  - Requires large routing tables to route to every prefix
+  Approach 1: Hot-potato routing - send to closest exit
+  Approach 2: Pick exit closest to destination
+
+Exterior Routing Protocol
+  - Every AS must interconnect using BGP-4
+  - Problems BGP-4 designed to solve
+    => Topology: The Internet is a complex mesh of different AS's with very little structure
+    => Autonomy of AS's: Each AS defines link costs in different ways, so not possible to find lowest cost paths
+    => Trust: Some AS's can't trust others to advertise good routes (e.g. two competing backbone providers), or to protect the privacy of their traffic (e.g. two warring nations)
+    => Policies: Different AS's have different objectives (e.g. route over fewest hops; use one provider rather than another)
+
+Internet structure
+  - Tier one ISPs (Top level): Internet service providers, such as AT&T, NTT, etc. They are defined as ISPs that are fully mesh interconnected with each other and who peer each other without chargin each other. It's called settlement-free peering. 
+  - Reginal ISPs (correspond to a state, a county)
+  - Access ISPs (User ISPs)
+Usually going up level would be money charged, but going down level would not. It's common to save money that regional ISPs to have connections across. 
+
+Summary
+  - The Internet consists of multiple AS's, each managed independently.
+  - An AS runs its own interior routing protocol
+  - Stub AS's use simple default routing
+  - AS's with multiple exits must decide the best exit
+  - AS's must connect using the BGP-4 protocol
+
+
+
+### 6-5 Routing -BGP
+
+Border Gateway Protocol (BGP-4)
+  - BGP is not a link-state or distance-vector routing protocol
+    => Instead, BGP uses what is called a "Path vector"
+  - BGP routers advertise complete paths (a list of AS's)
+    => Also called AS_PATH (this is the path vector)
+    => Example of path advertisement
+    => Ex. "The network 171.64/16 can be reached via the path {AS1, AS5, AS13}"
+  - Paths with loops are detected locally and ignored
+  - Local policies pick the preferred path among options
+  - When a link/router fails, the path is "withdrawn"
+
+Customers and Providers
+  - Provider
+  - Customer
+  - The relationship between them is although traffic can flow to or from the customer through the provider in either direction and may go off through multiple exit points. Because of the specific relationship between them, and that relationship is one of provider to customer. It has specific implications. One of them is that the customer will always pay the provider to carry its packets. 
+
+Customer-Provider Hierarchy: In general, traffic will not flow through an intermediate at the same level. 
+
+The Peering Relationship
+  - The basic peer relationship is that a peer cannot be a transit for its other peers. This is because the relationship between two peers is settlement free. So peer do not provide transit between peers.
+
+BGP Messages
+  - Open: Establish a BGP session
+  - Keep Alive: Handshake at regular intervals
+  - Notification: Shuts down a peering session
+  - Update: Announcing new routers or withdrawing previously announced routes
+  BGP announcement = prefix + path attributes
+  ex. Path attributes
+    => Include: next hop, AS Path, local preference, Multi-exit discriminator, ...
+    => Used to select among multiple options for paths
+
+BGP Route Selection Summary
+  - High Local Preference: Enforce relationships, ex. prefer customer routes over peer routes
+  - Shortest ASPATH
+    Lowest MED                        :    Traffic Engineering
+    i-BGP < e-BGP
+    Lowest IGP cost to BGP egress
+  - Lowest route ID: Throw up hands and break ties
+
+Summary:
+  - All AS's in the Internet must connect using BGP-4
+  - BGP-4 is a path vector algorithm, allowing loops to be detected easily
+  - BGP-4 has a rich and complex interface to let AS's chooose a local, private policy
+  - Each AS decided a local policy for traffic engineering, security and any private preferences
+
+
+
+### 6-6 Routing - Multicast Routing
+
+Techniques and Principles
+  - Reverse Path Broadcast (RPB) and Pruning
+  - One versus multiple trees
+Practice
+  - Multicast addresses
+  - IGMP - group management
+  - DVMRP - the first multicast routing protocol
+  - PIM - protocol independent multicast
+
+Reverse Path Broadcast (RPB) aka Reverse Path Forwarding (RPF)
+   - It builds on a very simple observation. Before an end-host A started sending multicast, the network will have already built a unicast, minimum cost spanning tree covering all of the hosts that the end-host A can reach. Then the end-host A can use as a loop-free method in order to deliver packets to everybody else. It is similar to flooding, but it would ask a more detailed question: "Is this the interface through which I would send it if it was a unicast packet going to the end-host A?" If so, then it would continue sending it, otherwise, it would drop. 
+   - Pruning in which those routers that don't have any connected hosts interested in receiving the packet, so the router would send a prune message and say "hey, I actually don't have any end hosts interested in receiving this, please don't send me multicast packets for this group address anymore". In this case, this router would then be removed from the reverse path broadcast tree and now that tree will only reach the end hosts that are interested. 
+   - Ideally, we would build a tree for every sender to every destination. However, in communications where the multicase group of end host is very small, it might be easier instead of building a whole load of trees, one for every source, to establish some, some rendezvous points. 
+
+Addresses and joining a group
+  - IPv4: Class D addresses are set aside for multicast.
+  - IGMP* (Internet group management protocol)
+    => Between host and directly attached router
+    => Hosts ask to receive packets belonging to a particular multicast group
+    => Routers periodically poll hosts to ask which groups they want
+    => If no reply, membership times out (soft-state)
+
+Multicast routing in the Internet
+  DVMRP
+    - Distance Vector Multicast Routing Protocol (RFC 1075)
+    - First Internet routing protocol
+    - Uses RPB+Prune
+  PIM
+    - Protocol Independent Multicast
+    - Two modes: dense mode, sparse mode
+    - Dense mode (RFC3973): Similar to DVMRP
+    - Sparse mode (RFC4601): Builds rendezvous points through which packets join small set of spanning trees
+
+Multicast in practice
+  - Multicast used less than originally expected
+    => Most communication is individualized (e.g. time shifting)
+    => Early implementations were inefficient
+    => Today, used for some IP TV and fast dissemination
+    => Some application-layer multicast routing used
+  - Some interesting questions
+    => How to make multicast reliable?
+    => How to implement flow-control?
+    => How to support different rates for different end users?
+    => How to secure a multicast conversation?
+
+
+
+### 6-7 Routing Spanning Tree Protocol
+  - Routing means any mechanism for delivering packets in a mindful way from a source to a destination. 
+
+Outline
+  - Ethernet "routes" packets too
+  - We know how address are learned, but how are loops prevented?
+  - Ethernet switches build a spanning tree over which packets are forwarded. 
+
+Ethernet Switch
+  1. Examine the header of each arriving frame
+  2. If the Ethernet DA is in the forwarding table, forward the frame to the correct output port(s).
+  3. If the Ethernet DA is not in the table, broadcast the frame to all ports (except the one through which the frame arrived)
+  4. Entries in the table are learned by examining the Ethernet SA of arriving packets
+
+Learning could lead to loops - Rather than deciding how we route along a spanning tree for each address or to reach each destination, it's going to build one spanning tree for the entire network. It's going to turn off certain routers so it's a tree no loops. 
+
+Preventing loops - Spanning Tree Protocol
+  - The topology of switches is a graph
+  - The spanning Tree Protocol finds a subgraph that spans all the vertices without loops
+    => Spanning: all switches are included
+    => Tree: no loops
+  - The distributed protocol decides
+    1. Which switch is the Root of the tree, and
+    2. Which ports are allowed to forward packets along the tree
+
+How it works
+  1. Periodically, all switches broadcast a "Bridge Protocol Data Unit" (BPDU) (ID of sender, ID of root, distance from sender to root)
+  2. Initially, every switch claims to be Root: sets distance field to 0
+  3. Every switch broadcasts until it hears a "better" message:
+    - A root with a smaller ID
+    - A root with equal ID, but with shorter distance
+    - Ties broken by smaller ID of sender
+  4. If a switch hears a better message, retransmit message (add 1 to distance)
+
+  Root port: The port on a switch that is closest to the Root
+  Designated port: The port neighbors agree to use to reach the Root
+  All other ports are blocked from forwarding (but still send/receive BPDUs)
+
+  Eventually:
+    - Only the root originates configuration messages (others retransmit them)
+    - Locally, switch only forwards on ports
+
+A brief history
+  - 1985: STP proposed; IEEE standard in 1990. Still very widely used
+  - 2004: STP replaced by RSTP which converges faster. Still, RSTP uses the network inefficiently
+  - 2012: A new standard for Ethernet switches was introduced Shortest-Path-Bridging (SPB, or 802.1aq). It's a link-state protocol like OSPF. 
+
+
+
+### 6-8 Names and Addresses: IPv6
+
+Goal of Internet Protocol Addresses
+  - Stitch many different networks together 
+  - Need network-independent, unique address
+    => Well, these days it can be only mostly unique -- see NATs, anycast, etc
+  - But there are only 2^32 IPv4 addresses
+    => Generallly, utilization is ~35%
+    => Need an address to communicate...
+
+Internet Protocol, Version 6
+  - Work started in 1994
+  - Basic protocol published in 1998 (RFC2460)
+  - Lull, then increased interested in 2003-2006
+  - Hard push within the IETF today for adoption
+
+Address Structure
+  - IPv6 has 128 bits of address
+    => 2^128 (3.4x10^38) addresses: 21 addresses/in^2 of the world's surface!
+  - Separated into subnet and interface portions (RFC4291)
+    subnet prefix (n)  and interface ID (128-n)
+  - Write address in hexidecimal as 8 blocks of 16 bits, separated by:
+    => market.scs.stanford.edu:2001:470:806d:1::9 prefixlen 64
+    => Can omit a single run of zeros with ::
+    => Use brackets in URLs: http://[2001:470:806d:1::9]:80
+    => Can write low 32 bits like IPv4:64:ff9b::171.66.3.9
+
+IPv6 Address Assignment
+  - Gone through several iterations, improved with experience
+  - RFC3177:/48 in general case, /64 sometimes, /128 very rarely
+  - RFIC 6177:at least /64, don't use /128
+    => Up to RIRs to decide on allocation size (kind of like IPv4 today)
+
+
+
+### 6-9 Routing recap
+
+Approaches
+  - Flooding
+  - Source routing
+  - Forwarding table
+  - Spanning tree
+Algorithms
+  - Bellman-Ford "distance vector" algorithm. Used by RIP
+  - Dijkstra's shortest path first "link state" algorithm. Used by OSPF
+Internet routing
+  1. Hierarchical routing
+  2. BGP - path vector routing and local policies
+  3. Multicast routing
+  4. Spanning Tree Protocol (STP)
