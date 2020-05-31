@@ -1,0 +1,395 @@
+Chapter 7 Lower Layers
+
+### 7-1 Physical Layer: Capacity and Modulation
+
+Capacity - how do we determine how many bits per second a given physical layer can support. 
+Modulation - how is it that you represent these bits on the medium itself. 
+
+Shannon Limit
+  - There is a theoretical limit on how information a channel can carry (Shannon limit)
+  - Channel capacity = B log2(1 + S/N)
+    => B is Bandwidth, S is Signal strength, N is Noise
+  - Higher S/N requires lower noise (better/more expensive hardware), or stronger signal (higher voltages)
+  - Building hardware for very high handwidths is difficult
+
+Analog Signals
+  - Frequency: 1/wavelength
+  - Bandwidth: size of frequency range
+  - Phase: timing of waves within a wavelength
+  - Speed of light ~ 1 foot/nanosecond
+
+Modulation: ASK, FSK
+There are a whole bunch waves we can use to represent waves
+  - Amplitude Shift Keying (ASK) - small and large waves
+  - Frequency Shift Keying (FSK) - higher and lower frequencies
+
+Amplitude Shift Keying
+  - ASK works well in wired networks because signal strength does not decrease much with distance
+    => Used in most common wired Ethernet systems
+  - PAM-5: five level pulse amplitude modulation (-2, -1, 0, +1, +2)
+    => Used in 100BASE-T and 1000BASE-T Ethernet (100Mbps and gigabit)
+  - PAM-16: sixteen level pulse amplitude modulation
+    => Used in 10GBASE-T Ethernet (10 gigabit)
+
+Phase Shift Key (PSK)
+  - PSK words well when there can be significant variation in signal strength
+    => DSL, cable moderns, wireless all use phase shift keying
+  - Binary phase shift keying (BPSK)
+    => Two phases: (0, pi)/(0, 180-degree)
+    => Used in 1Mbps and 2Mbps 802.11b(WiFi)
+  - Quadrature phase shift keying (QPSK)
+    => Four phases: (0, pi/2, pi, 3pi/2)/(0, 90-degree, 180-degree, 270 degree)
+    => Used in 5.5Mbps and 11Mbps 802.11b(WiFi)
+
+I/Q Modulation
+  - I:in-phase component (0 degree)
+  - Q:quadrature component (-90 degree)
+  - A symbol is a linear combination of I and Q
+    => Binary phase shift keying (BPSK)
+      - Two phase: 0 degree, 180-degree
+      - (I, Q) = (1, 0) (-1, 0)
+    => Quadrature phase shift keying (QPSK)
+      - Four phase: 0-degree, 270-degree, 180-degree, 90-degree
+      - (I, Q) = (1,0)(0,1)(-1,0)(0,-1)
+
+I/Q Constellations
+  - For phase shift keying, can represent symbols in an I/Q constellation, a 2D plot of the IQ values
+    => Angle of vector: phase of signal
+    => Length of vector: amplitude of signal
+
+Symbols vs. Bits
+  - A symbol is the unit of transfer at the physical layer
+  - A symbol can contain more than one bit
+    => BPSK: 1 bit per symbol (0, 1)
+    => QPSK: 2 bits per symbol (00, 01, 10, 11)
+  - Example: wired 100BASE-T Ethernet (100Mbps, Cat-5 cabel)
+    => 5 voltage levels of PAM-5 (-2, -1, 0, +1, +2)
+
+QAM
+  - Amplitude shift keying and on/off keying use only amplitude to encode symbols
+  - Phase shift keying uses only phase to encode symbols
+  - Quadrature Amplitude Modulation (QAM) uses both amplitude and phase
+    => 16-QAM: 16 symbols, 4 bits/symbol
+    => 256-QAM: 256 different symbols, 8 bits/symbol
+
+Overview:
+  - Many wahs to represent bits in terms of analog signals: frequency, amplitude, phase
+  - Wired Ethernet uses amplitude (ASK)
+  - Most technologies today use phase (PSK) or phase and amplitude (QAM)
+  - Can represent a QAM symbol as a linear combination of the In-phase component (I) and the Quadrature component (Q)
+    => How actual circuits do it
+    => Nice visualization in a 2D plot
+
+
+
+### 7-2 Physical Layer: Bit Errors and Coding
+
+Signal to Noise Ratio (SNR)
+  - Shannon limit = B log2(1 + S/N)
+  - B is Bandwidth, S is Signal strength, N is Noise
+    => Possible data rate bounded by the signal to noise ratio (SNR)
+    => Just a limit! Don't necessarily know how to achieve it
+    => Bandwidth typically fixed
+  - Stronger signal means you can transmit data faster
+    => Shorter symbols
+    => More bits per symbol (denser constellation)
+
+SNR/BER Curves
+  - For a given modulation scheme and signal-to-noise ratio, you can compute the expected bit error rate
+    => Making some mathematical assumptions about noise
+    => Bedrock principle of RF communication theory
+  - Bit error rate can become arbitrarily low, but never reaches zero!
+  - In practice, the math works out that sending packets as raw bits is very inefficient
+    => Expected data throughput is far, far below Shannon limit
+
+In practice, the physical layer is you take, say here are bits, let's say we have a message "hello", so H, E, L, L, O, question mark, which are these ASCII values, maps to these bits. The packet transform these data into symbols with some amount of redundancy, some amount of error correcting codes. So the packet will actually get a little longer in terms of the numbers of bits we are sending at the physical layer. 
+
+Coding
+  - Adding a little redundancy at the physical layer can greatly improve link layer throughput
+    => Both in theory and in practice
+  - Coding gain: the ratio of bits at link layer to bits at physical layer
+    => 1/2 code: each link layer bit is 2 physical layer bits 
+    => 3/4 code: each 3 link layer bits are 4 physical layer bits
+
+Calculating Data Rate
+  - bitrate = bits/symbol * symbol rate * coding rate
+
+Overview
+  - Chips (physical layer) versus bits (link layer)
+  - Physical layer must deal with noise, which can cause chip errors
+    => Denser modulation provides higher throughput
+    => Sparser modulation has fewer errors
+  - Translating between link layers bits and physical layer bits
+    => 1:1 mapping is rarely the most efficient data representation
+    => Coding gain: L2/L1 ratio, so can be robust to some chip errors
+
+
+
+### 7-3 Physical Links - Clocks and Clock Recovery
+  Whenever we send data over a link, we normally assume a data rate like ten megabits per second or gigabit per second. When we send it ten megabits per second, we're assuming each bit lasts 100 nanoseconds, or 10,000,000 of them per second. So there must be some notion of the clock that was used by the transmitter in order to send those bits in the first place. And the receiver needs to know the clock as well, in order to be able to correctly decode them. 
+
+  The problem is that there is no universal reference for a clock whih is precisely the same in two places. So the clock that's used, or the frequency that's used by the transmitter is not precisely known to the receiver. It has to figure it out and so in figure out when one bit ends and an other bit begins. 
+
+Outline
+  - Data is transmitted using a "clock"
+  - The receiver needs to know when to sample the arriving data
+  - Asynchronous communications
+  - Synchronous communications
+    => Encoding the clock with the data
+    => Recovering the clock
+    => Getting the data into the receiver's clock "domain"
+
+Data is transmitted using a clock, because we want it to have a particular frequency. A flip flop is used to time the data according to the outgoing clock which is ten megahertz, in other words, there's a 100 nanosecond. 
+
+Asynchronous communications sometimes used for links with short packets, such as infrared remote control or serial links. 
+
+Synchronous communication
+  - We are sending data through the link. When the data arrives, because we are only sending one over one piece of wire, the receiver is going to try and figure out the clock that was used by the sender - clock recovery unit or clock recovery circuit. These are special circuits that take the incoming signal and determine the clock that was used by the sender. It examine the frequency and the phrase of the arriving bits. There are many types of circuit ysed for a clock recovery unit and the most common one is called a phase locked loop or PLL. There is also a delayed locked loop called DLL, they are kind of a digital equivalent. There is also a saw filter or surface acoustic wave. There is a flip flop that's used at the receiver in order to clock the data in. It's been clocked using the sender's clock. We need to use own clock when we got the data inside the receive clock domain. Once the data is being transmitted by flip flop, it's placed into a small fifo which is critical for the system to work. The fifo is another specical circuit to help us take the bit from the sender's clock domain into the receiver's clock domain. The bit is written into the fifo using sender's clock and read out of the fifo using the receiver's clock. There is a buffer in between fifo which we call it elasticity buffer because it's taking up the slack between the two clocks. If the clock is not sent separately, the data stream must have sufficient transitions so that the receiver can determine the clock. 
+  - Manchester coding is a simple mechanism. Whenever we have a 0, we would have a down transition and whenever there is a 1, we would have a up transition. 
+    => Advantages of Manchester encoding:
+      - Guarantees one transition per bit period
+      - Ensures d.c.balance (i.e. equal numbers of hi and lo).
+    => Disadvantages
+      - Doubles bandwidth needed in the worst case
+  - Encoding for clock recover
+    => Advantages of 4b/5b encoding
+      - More bandwith efficient (only 25% overhead)
+      - Allows extra codes to be used for control information
+    => Disadvantages
+      - Fewer transitions makes clock recovery a little harder
+
+
+
+### 7-4 Physical and Link Layers: Forward Error Correction (FEC)
+
+SNR/BER Curves
+  - For a given modulation scheme and signal-to-noise ration, you can compute the expected bit error rate
+    => Making some mathematical assumptions about noise
+    => Bedrock principle of RF communication theory
+  - Bit error rate can become arbitrarily low, but never reaches zero!
+  - In practice, the math works out that sending packets as raw bits is very inefficient
+    => Expected data throughput is far, far below Shannon limit
+
+Coding
+  - Adding a little redundancy at the physical layer can greatly improve link layer throughput
+    => Both in theory and in practice
+  - Coding gain: the ratio of bits at link layer to bits at physical layer
+    => 1/2 code: each link layer bit is 2 physical layer bits
+    => 3/4 code: each 3 link layer bits are 4 physical layer bits
+  - Forward error correction (FEC): proactively adding some additional data (redundancy) so recipient can correct potential errors
+
+Coding Algorithms
+  - There are many, many coding algorithms, with different tradeoffs
+    => Hamming codes, convolutions codes, LT codes, LDPC, Turbo codes, Tornado codes, Raptor codes...
+  - Reed-Solomon error correction
+    => Tremendously commonly used (e.g., CDs, DVDs, DSL, WiMax, RAID6 storage)
+    => Mathematically simple (compared to some of the others)
+
+Reed-Solomon Basic Idea
+  - Take k chunks of data
+  - Make them the coefficients of a k-l degree polynomial
+  - Compute n points along the polynomial (n >= k), send as coded data
+    => Any k of the n points allow you to recover the polynomial coefficients
+  - Complications: value of n computed points must be in a finite filed (limited number of bits)
+
+Details 
+  - Two kinds of errors
+    => Erasures: location of error known ("erased" values)
+    => Errors: location unknown (e.g., bit error)
+  - Take k chunks of data, code into n chunks (n >= k)
+  - Reed-Solomon can correct up to (n-k) erasures (need k points)
+  - Reed-Solomon can correct up to (n-k)/2 errors
+
+Conceptual Reed-Solomon Code
+  - Take 223-8 bit values, make coefficients of 222-degree polynomial p
+  - Compute p(0), p(1), p(2), p(3), p(4)...p(254) as 8-bit values (field)
+  - Send 255 values
+  - This is a (255,223) code: each 255 codewords are from 223 data words
+    => Can recover from up to 32 erasures or 16 errors
+  - This isn't what's done in practice today
+    => 0-255 are not a field, which is needed for the math to work
+    => It's too complex to decode
+    => But it gives you the basic idea
+
+Interleaving
+  - A (n+k, n) Reed-Solomon code protects against k erasures or k/2 errors
+  - Physical media often have burst errors
+  - Can make encoding more robust through interleaving
+  - Example: 12 chunks of a (7,5) code
+    => Each chunk is 21 bits long: 7 code words of 3 bits each
+
+
+
+### 7-5 Physical Links: CSMA/CD and Ethernet
+
+The link layer covers how the end host is connected to a router, how one router is connected to the next. Generally, packets at the IP layer are encapsulated into a linked layer frame, most often Ethernet, in order to be sent off the first router. 
+
+CSMA/CS is right at the heart of how Ethernet works. 
+Ethernet is referred to layer two, this goes back to the seven layer OSI model which includes the Link and the Physical layers. The link layer covers the frame format and the algorithm that decides when a packet can be sent onto the wire. The Physical layer covers things like the connectors and the electrical signals that are used on the wire. Ethernet started out as to connect multiple computers together on a signle cable. That single cable was arranged as a long string or a bus which a big, thick, yellow cabel that snaked around, either in the walls, the ceiling, or under the floor. 
+
+Sharing a "medium"
+  - Ethernet is an example of multiple hosts sharing a common cable ("medium")
+  - To share the medium, we need to decide who gets to send and when. There is only one packet can be send at a time.
+  - There is a general class of "Medium Access Control Protocols", or MAC Protocols
+    => Examples of MAC Protocols: 
+      -> Packet-Switched Radio networks - Aloha
+      -> Carrier Sense Multiple Access/Collision Detection - Ethernet (IEEE 802.3)
+      -> Token Passing - Token Ring (IEEE 802.5)
+    => A random access host is where every host can try to send at any time that it has data to send. It doesn't need to wait for central authority to give it permission or until its turn comes around. 
+    => The other extreme, deterministric protocols like token passing have some explicitly control who gets to go next. There are lots of ways in which this mechanism can fail such as the token can be lost, or get duplicated. It fallen out of facor and being replaced by simpler Ethernet mechanism. 
+
+Goal of MAC Protocols - Medium Access Control protocols arbitrate access to a common shared channel among a population of users
+  1. High utilization of the shared channel - not trying to recover from collisions or when multiple end hosts are talking at the same time
+  2. Fair among end hosts - every body gets equal opportunities to send
+  3. Simple and low cost to implement
+  4. Robust to errors; fault tolerant - when the system fails, the chances are it's not going to bring the whole network down
+
+  - Aloha - all hosts would transmit on one frequency. It would be send up to the main relay station or the central relay station on Oahu. Then the packet data would be retransmitted out over frequency one, a separate frequency. So essentially, a separate orthogonal channel would be repeated to all end hosts. And for this, we need a protocol that everybody agrees upon so that the system will work correctly. 
+    - Aloha protocol is very simple
+    - (Quite) robust against failure of a host
+    - The protocol is distributed among the hosts
+    - Under low-load, we can expect the delay to be small
+    - Under high-load, a lot of time "wasted" sending packets that collide.
+
+Aloha MAC protocol is simple:
+  1. If you have data to send, transmit it
+  2. If your transmission, "collides" with another, retry later
+    - How do you know you collide it? You would listen. You would send on frequency zero, and you would listen on frequency one. If what came back was not a correct copy of what you would sent on frequency zero, you know it must have collided. 
+
+Improving performance:
+  1. Listen for activity ("carrier sense") before sending a packet
+  2. Detect collisions quickly and stop transmitting
+  3. After collision, pick random waiting time based on the load.
+
+CSMA/CD Protocol
+  - All hosts transmit & receive on one channel. Packets are of variable size.
+  - When a host has a packet to transmit:
+    1. Carrier Sense: Check the line is quiet before transmitting.
+    2. Collision Detection: Detect collision as soon as possible. If a collision is detected, stop transmitting; wait a random time, then return to step 1. 
+
+
+
+### 7-6 Physical Links: Ethernet
+
+Ethernet started in early 1970s, originally at around, ten megabits per second. It has evolved a long way since then. In the first place, CSMA/CD was right at the heart of how Ethernet worked. And determined how many hosts would share a single cable. 
+
+Ethernet Frame Format
+Bytes:  7       1     6   6   2       0-1500   0-46   4
+      Preamble  SFD   DA  SA  Type    Data     Pad    CRC
+  1. Preamble: trains clock-recovery circuits
+  2. Start of Frame Delimiter: indicates start of frame
+  3. Destination Address: 48-bit globally unique address assigned by manufacturer.
+    1b: unicast/multicast
+    2b: local/global address
+  4. Type: Indicates protocol of encapsulated data (e.g. IP = 0x0800)
+  5. Pad: Zeroes used to ensure minimum frame length
+  6. Cyclic Redundancy Check: check sequence to detect bit errors
+
+The original 10Mb/s Ethernet Standard was standardized by IEEE 802.3. It has the MAC protocol and the frame structure. Underneath, we have different options for the physical layer such as 10Base-5 (Original Ethernet, large thick coaxial cable), 10Base-2 (Thin coaxial cable version), 10Base-T(Voice-grade unshielded twisted-pair category-3 telephone cable), 10Base-F (two optical fibers in a single cable)。
+
+Ethernet really took off when the 10Base-T standard came along for running Ethernet over twisted pair. 
+  - 10 megabit per second was carried over category three twisted pair telephone wires
+  - "Star" wiring worked well with wiring closets
+  - Centralized management made networks easier to manage
+  - Led to a huge growth in Ethernet in mid 1980s
+
+Over the year, people want to make internet faster and faster. 
+10 Mb/s -> 100 Mb/s -> 1 Gb/s -> 10 Gb/s
+
+Ethernet Switching
+  - 10BaseT meant hubs/repeaters in the wiring closet.
+  - 100Mb/s and 1Gb/s Ethernet meant 100m limit.
+  - The need to partition Ethernet networks to reduce the "collision domain"
+  - Cost of switching hardware came down
+  - Led to Ethernet Switching...
+  - Forwarding and learning:
+    1. Examine the header of each arriving frame
+    2. If the Ethernet DA is in the forwarding table, forward the frame to the correct output port(s)
+    3. If the Ethernet DA is not in the table, broadcast the frame to all ports (except the one through which the frame arrived)
+    4. Entries in the table are learned by examining the Ethernet SA of arriving packets.
+Topology: Run Spanning Tree Protocol (STP) to create loop free topology.
+
+Summary:
+  - MAC Protocols: Random and Deterministic
+  - CSMA/CD is simple, random access protocol used in the first 10Mb/s version of Ethernet
+  - Ethernet standards emerged for 100Mb/s, 1Gb/s and 10Gb/s over the last 20 years
+  - Limits on link size and the need for more capacity meant CSMA/CS was replaced by Ethernet switching
+
+
+
+### 7-7 Wireless Networking
+
+Access Point Networks
+  - Unlike the wired network where the medium, the wire, is completely under the control - there's nobody fighting you for the capacity of that wire. 
+    - In the wireless environment, you're using electromagnetic spectrum around you which everyone else might be using. It's not a controlled medium, it's a shared medium. It's very tightly regulated. 
+    - Radiates over space
+      => Signal weakens with distance: r^2 or faster
+      => Intermediate links
+    - Uncontrolled medium
+      => Signal strength changes over time
+      => Interference from other transmitters, objects such as wall, doors, people, etc. 
+
+Signal Strength
+  - Obstructions can further weaken signal
+  - Wireless signals can reflect
+    -> Multipath: can receive signal in multiple paths/reflections, with different delays (analogy: echoes in a canyon)
+  - There is no perfectly uniform antenna
+  - The world is continously changing
+
+Summary:
+  - Wireless networks are increasingly the last hop for personal communications
+    => But generally don't work as well
+  - Wireless behaves very differently from wired: many complex behaviors!
+    => Signal weakens over distance
+    => Signal affected by environment
+    => Intermediate links
+    => External interference
+  - Different behavior leads to different protocols and algorithms
+
+
+
+### 7-8 Wireless Media Access Control
+
+The basic goal for MAC are arbitrate control of the channel so that:
+  - One node should be able to use 100%
+  - Multiple nodes should receive a fair share
+  - High utilization under connection
+
+The problem with CSMA/CD in wireless is the collision detection. It could be that the interfering transmitting signal is too weak for the transmitter to hear. In practice, wireless network, in order to be able to respond to collisions, in order to get good utilization of the channel, use different algorithms. 
+
+
+
+### Wireless: CSMA/CA - Carrier sense multiple access/collision avoidance
+
+Link Layer Acknowledgments - For a wireless network to be able to detect that there's a collision, it needs to know whether or not a packet collided or it was delivered successfully. Because in a wireless network due to signal strength attenuation, you can't detect that there was a collision at a receiver because you can't observe the receiver directly. You need some feedback from the receiver as to what's happened. 
+
+CSMA/CA
+  - The idea is that it start off with some initial random back off, could be very small. 
+  - Sense the local channel, transmit after backoff
+  - If packet not acknowledged, backoff agian, retry
+  - If packet acknowledged, accept next packet for transmission
+
+
+
+### 7-9 802.11 Format and Overhead
+
+  - Basic MAC format to work on top of many physical layers
+  - Needs backwards compatibility
+    => Use time, rather than bytes
+  - MAC control (virtual carrier sense) specified in terms of duration
+  - Virtualizes the link
+    => Embed additional addresses
+  - Don't be fooled by 600 Mbps
+
+
+
+### 7-10 Fragmentation
+
+Fragmentation and Assembly
+  - Problem occurs when higher layer's data unit is too large for lower layer
+  - Fragmentation: taking a large data unit and breaking it into smaller chuns
+  - Assembly: combining chunks into original data unit
+  - Examples:
+    => Transport: TCP takes stream of bytes and breaks into TCP segments
+    => Network: IP takes packets too big for a link and breaks them up into IP fragments
+    => Link: 6 lowpan takes IPv6 packtets and breaks them into link fragments if needed
