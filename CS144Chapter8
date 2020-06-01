@@ -1,0 +1,391 @@
+Chapter 8 Security
+
+### 8-1 Network Security
+
+How can communication be compromosed?
+  1. Eavesdrop - Passively "sniff" and record network data (or metadata). For example:
+    - Passively tap an electrical or optical cable
+    - Listen to WiFi
+    - Compromise a router to duplicate and forward data
+  2. Modify, delete, insert - Actively tamper with our data by:
+    - Changing contents of packets
+    - Redirect packets to another server
+    - Take over control of an end host
+  3. Prevent communication - Usually called "denial of service"
+
+What we want secure communications over the internet is:
+  1. Secrecy/condifentiality: No on can listen-in to our communication. We will study encryption.
+  2. Integrity - Our messages are not altered in transit. We will study message authentication codes (MACs).
+  3. Authentication - Confirm the identity of the other party. We will study digital signitures and certificates.
+  4. Uninterruoted communication - We don't want someone to prevent us from communicating. 
+
+Types of attack
+  1. Eavesdropping
+  2. Redirecting Ethernet, IP and DNS traffic
+  3. Hijacking a running TCP connection
+  4. Denial of service
+
+
+
+### 8-2 Layer 2 Attacks
+
+Common types of attack at Layer 2
+  1. Eavesdropping with an interface in promiscuous mode
+    - Easy in a WiFi network and early Ethernet networks where packets were broadcast onto a single shared link
+    - Doesn't work so well with Ethernet switches, because packets are usually private to the links between the source and the destination
+  2. Force packets to be broadcast - then use method(1)
+    - Prevent Ethernet switch from learning, forcing it to broadcast packets
+  3. Masquerade as DHCP or ARP server - redirect packets to a different end-host
+
+Original Ethernet: shared cable
+  - Eavesdropping is very easy when packets are broadcast on a shared medium; just like WiFi packets are broadcast in the air for everyone to hear, the earliest versions of Ethernet broadcast packets on a common cable attached to all end hosts. 
+Ethernet changed over the years
+  - Today, Ethernet networks use switches rather than a single shared cable because they allow many simultaneous communications in the network. It's good for performance, but it's bad for the attackers because the packets only pass over the two links between two end hosts. 
+  - A common exploit is to attack the tables in the Ethernet switches which learns the addresses of the end hosts by watching packets in the network with a forwarding table. If the packet isn't in the table, it would be broadcast. The attacker can keep filling up the forwarding table with other addresses at high rate. The switches will learn these addresses and displacing entries already in the switches. The table will keep evicting the entries so the packets got sent over would be broadcast and seen by the attacker. This is called MAC overflow Attack. 
+  - Another common type of attack is to set up a rogue DHCP server. The attacker is going to try and persuade you to use a rogue DHCP server. (Recall DHCP is a server offered by a network to help configure your computer when it boots or first attaches to the network. Your computer sends out a sequence of broadcast discovery packets to find the DHCP server, which is usually hosted on the nearest router.) After your computer has found the DHCP server, it sends a request, asking to be allocated an IP address on the local network, along with the address of the default router and the addresses of the DNS servers it should use. 
+
+    => DHCP and DNS Masquerade: If the Rogue DHCP server can respond faster than the legitimate server, it can respond to the end host first, giving the end host whatever configuration information it wants, for example, a bad address so the end host would send info to the wrong address. 
+    => DHCP and DNS Masquerade: The attacker could also give the end host the IP address of a remote rogue DNS server, so next time when the end host is looking up the address, it would return the IP address of a different server and intercept the end host's traffic. 
+    => ARP Masquerade:  The attacker could also set up a rogue ARP server. When the end host is sending packets to a local host, or via the router, it will first send an ARP request to find out the Ethernet address of the next hop. The end host sends a broadcast ARP request packet to the ARP server, which replies with the legitimate Ethernet address it is looking for. If the attackers set up a Rogue ARP server that responds faster than the legitimate ARP server, it can give the end host the wrong information. If the attacker replies with the Ethernet address of a rogue server in the local network, then all of the Alice's traffic will be sent to the rogue server. This is an easy way to setup a man in the middle attack, by passing all of the end host's traffic through a rogue server without the end host knowing. 
+
+
+
+### 8-3 Layer 3 Attacks
+
+Common types of attack at Layer 3
+  1. Use ICMP to tell source end-host to redirect traffic
+    - Send ICMP redirect messages to source host
+  2. BGP hijacking - takes advantages of the fact that neighboring ISPs trust one another to provide accurate information about AS path to follow in order to reach the destination prefix. When two BGP peers start up, they create a TCP session over which they pass route advertisements and withdrawals. Once the session is initiated, they trust each other to provide true information about paths. If ISP is badly behaved or someone managed to break into the TCP session and massacre as a legitimate ISP then it's quite easy to redirect traffic. 
+    - ISP advertises prefix belonging to someone else; capturing their traffic
+    - ISP advertises invalid ISP path, creating "black hole" for traffic
+    - Requires masquerading as ISP, or taking over BGP TCP session
+  3. More specific prefix
+    - Insert more specific prefix to divert a portion of an address space 
+    - Requires masquerading as ISP, or taking over BGP TCP session
+
+ICMP Redirect:
+  - When a packet is sending to a wrong router, the router redirect the packet and sends the message to the sender for future corrections. 
+
+ICMP Redirect Attack: 
+  - The attacker can send ICMP redirect message to the sender to tell her to route packets to prefix a via the attacker's computer instead. Therefore, in the future, the sender would send packet to the attacker instead. The attacker might choose to drop the packet, denying the sender from being able to communicate with the destination. Or the attacker might look at the packet before forwarding it to the destination creating a "man in the middle" attack. 
+
+BGP Attacks
+  - Security vulnerabilities in BGP
+    1. An AS can advertise IP addresses it doesn't own
+    2. An AS cannot verify that an AS path is correct
+    3. ISPs exchange BGP messages over a regular TCP session
+
+** Almost any ISP can bring down the Internet (accidently or maliciously)
+
+
+
+
+### 8-4 Denial of Service
+
+- In Feb, 2000, Yahoo's router kept crashing
+  - Engineers had problems with it before, but this was worse
+  - Turned out they were being flooded with ICMP echo replies
+  - Many DDoS (distributed denail of service) attacks followed against high-profile sites
+- Basic Denial of Service attack
+  - Overload a server or network with too many packets
+  - Maximize cost of each packet to server in CPU and memory
+- Distributed DoS(DDos) particularly effective
+  - Penetrate many machines in semi-automatic fashion
+  - Make hosts into "zombies" that will attack on command
+  - Later start simulataneous widespread attacks on a victim
+
+Dos attack overview
+  - class of attacks that just target availability
+  - Many motivations for Denial of Service (DoS)
+    => Extortion - ex. pay us a small sum of money or we take down their off-shore on-lin gambling site
+    => Revenge - Spammers permanently shut down anti-spam company Blue Security
+    => Bragging rights
+  - Can DoS at many different layers
+    => Link, Network, Transport, Application, ...
+
+Warm up: simple DoS attacks
+  - Jam a wireless network at physical layer
+    => Simple, maybe even with off-the-shelf cordless phone
+  - Exploit NAV structure at 802.11 link layer
+    => NAV (Net Allocation Vector) used to suggest when network maybe free (e.g. "after RTS/CTS exchange")
+    => Use to reserve net repeatedly for max number of seconds
+  - Flooding attack - e.g. flood ping
+    => ping -f victim.com - floods victim w. ICMP echo requests
+  - Amplification can make attacks more powerful than resources directly available to attacker
+
+EDNS attack
+  - Some EDNS [RFC 2671] responses 40x size of query
+  - ~500,000 open DNS resolvers on Internet
+  - Flood victim w. DNS responses
+    => Send request forged to look like victim is source
+    => Cost attacker only 60 bytes each
+    => Go to many different DNS resolvers
+    => All responses go back to same victim, 3,000 bytes each
+
+SMURF attack
+  - ICMP echo supports pinging IP broadcast address
+    => Useful to know what machines are on your network - all reply
+  - Big amplification for flooding attack
+    => Compromise one machine on net
+    => Ping broadcast address "from" victim IP
+    => All machines will reply
+  - Attack took down Yahoo!, buy.com, Amazon, in 2000
+
+The SYN-bomb attack
+  - Recall the TCP handshake:
+    => C -> S: SYN, S -> C: SYN-ACK, C-> S: ACK
+  - How to implement:
+    => Server inserts connection state in a table
+    => Waits for 3rd packet (times out after a minute)
+    => Compares each new ack packet to existing connections
+  - OS can't handle arbitrary # partial connections
+  - Attack: Send SYN packets from bogus addresses
+    => SYN-ACKs will go off into the void
+    => Server's tables fill up, stops accepting connections
+    => A few hundred pkts/sec completely disables most servers
+  - MS Blaster worm
+    => Flooded port 80 of windowsupdate.com w. SYN packets
+  - Clients couldn't update to fix problem
+  - Microsoft's solution
+    => Change the URL to windowsupdate.microsoft.com
+    => Update old clients through Akami
+
+Other attacks
+  - IP Fragment flooding
+    => Kernel must keep IP fragments around for partial packets
+    => Flood it with bogus fragments, as with TCP SYN bomb
+  - UDP echo port 7 replies to all packets
+    => Forge packet from port 7, two hosts echo each other
+    => Has been fixed in most implementations
+
+Application-level DoS
+  - DNS supported by both TCP and UDP
+    => TCP protocol: 16-bit length, followed by msg
+    => Many implementations blocked reading message
+    => Take out DNS server by writing length and just keeping TCP connection open
+  - SSL requires public key decryption at server
+    => Can use up server's CPU time by opening many connection
+
+
+
+### 8-5 Security Principles - Confidentiality, Integrity, and Availability
+
+Basic Problem
+  - To first approximation, attackers control the network
+    => Can snoop, replay, suppress, send
+  - How do we defend against this? 
+    => Communicate securely despite insecure networks -- cryptography
+    => Secure small parts of network despite insecurity of wider network
+    => Design systems to scale well in response to attacks
+  - Two approaches: cryptography and scalable system design
+
+Cryptography
+  - A set of mathematical principles and ideas for securing communication
+  - Be careful: easy to mess up!
+    => Often misused!
+    => Need to understand what it guarantees and what it doesn't
+  - How cryptography helps
+    => Confidentiality: we can communicate privately (encryption)
+    => Integrity: protect from tampering (hashes, signatures, MACs)
+    => Authenticity: you are whom you say you are (certificates, MACs, signatures)
+
+Confidentiality
+  - I want to tell you something secretly, so no-one else knows what I said
+    => "My credit card number is ..."
+  - Perfect confidentiality: one-time pad
+    => You and I share a perfectly random key of zeros and ones, K, nobody else has it
+    => I XOR my message M with K, producing C, send C to you (C = M XOR K)
+    => You XOR C with K, you have reconstructed M (M = C XOR K)
+  - Advantages: informationally theoretic secure and fast
+    => Given any C, any M is equally likely
+  - Disadvantage: need a K as long as all data I might ever send
+  - Ways to exchange a small K such that there are 2^k possibe Cs
+
+Integrity
+  - I want to make sure you received my message unchanged/untampered
+    => "I recalculated his grade and it is a C..." program to run on your computer
+  - I want to make sure you send the message
+    => Nick says "I said it was alright if he handed in the assignment late"
+  - Cyptographic hash: H(M)
+    => Turn arbitrary length input into fixed length hash
+    => Collision-resistance: given x != y, intractable to find H(x) = H(y)
+  - Message authentication code: MAC(M, K)
+    => Use key K to generate MAC(M,K), use K to check MAC(M, K)
+    => Intractable to generate MAC(M,K), unless you have K
+
+Authenticity
+  - I want to make sure you are whom you say you are
+    => "This is the provost... I need your credit card number"
+    => "You should send all of my traffic through this third party"
+  - We've exchanged a secret K beforehand: MAC("This is the...", K)
+  - If we haven't: chain of trust
+    => We can trust Verisign by design (root of trust)
+    => Verisign says: "here's a secret for Stanford"
+    => Stanford says "here's a secret for the provost"
+
+High Availability Design
+  - Denial of service (DoS), Distributed Denial of Service (DDoS)
+  - Many kinds of attacks, many defenses
+    => Replication (scale-out)
+    => Keeping costs symmetric
+    => Upstream filtering (stop letting those pings through, router!)
+  - Continual arms race
+
+
+
+### 8-6 Confidentiality - It's just between you and me
+
+AKA secrecy
+
+Symmetric Encryption
+  - Both parties, Alice (one of the end host) and Bob (the other end host), share a secret key K
+  - Given a message M and a key K
+    => M is known as the plaintext or cleartext, what we're trying to keep secret
+    => Encrypt: E(K, M) -> C, C is known as the ciphertext
+    => Decrypt: D(K, C) -> M
+    => Attacker cannot derive M from C without K (or trying every K...)
+  - E and D take the same key K, hence the name "symmetric" encryption
+
+One-Time Pad
+  - Generate a perfectly random stream of bits K
+  - E (K, M) = M XOR K
+  - D (K, C) = C XOR K (K XOR K == 0)
+  - "Perfect" secrecy
+    => Informationally-theoretic secure: given C but not K, M could be anything!
+    => Fast: XORing is cheap and fast
+  - Totally impractical
+    => Need a very big key, same size as all data
+
+Ciphers
+  - Stream ciphers: pseudo-random pad
+    => Generate a psudo-random sequence of bits based on key
+    => Encrypt/decrypt by XORing like one-time pad
+    => BUT NOT A ONE-TIME PAD! Immediately mistrust anyone who says no!
+    => Have run into many problems in practice, so trying to avoid it. 
+  - Block ciphers
+    => Operate on fixed sized blocks (64 bits, 128 bits, etc)
+    => Maps plaintext blocks to ciphertext blocks
+    => Today, should use generally AES: many other algorithms
+
+Cipher Block Chaining (CBC) Mode
+  - Choose initialization vector (IV) for each message, can be publicly known
+    => Can be 0 if key only ever used to encrypt one message
+    => Choose randomly for each message if key re-ised
+  - C1 = E (K, M1 XOR IV), Ci = E (K, Mi XOR Ci-1)
+
+Other Modes:
+  - Cipher Feedback (CFB) mode: Ci = M XOR E (K, Ci-1)
+    => Useful for message that are not multiple of block size
+  - Output Feedback (OFB) mode
+    => Repeatedly encrypt IV & use result like stream cipher
+  - Counter (CTR) mode: Ci = Mi XOR E (K, i)
+    => Useful if you want to encrypt in parallel
+
+
+
+### 8-7 Integrity - I'd swear my life on it
+
+Secrecy is not enough
+  - Encryption protects someone from reading plaintext
+  - An adversary can still modify messages
+    => Flip a bit in the plaintext
+    => Lead you to accept garbage data
+  - Integrity: protecting messages from tampering and modification
+    => Node actually advertised that routing vector
+    => Person actually made that bid
+    => Endpoint actually sent that message to terminate the connection
+  - Confidentiality without integrity is rare (and a sign of a poor design), while integrity without confidentiality is common
+    => Exception: encrypted storage (not on a network, no MitM)
+
+Two integrity examples:
+- Cryptographic hashes
+  => Way to verify that data has not been modified
+  => Requires no secrets: anyone can generate one
+  => Useful in data storage
+- Message authentication codes (MACs)
+  => Way to verify that data has not been modified
+  => Also verifies generator has secret key:authenticity
+  => Useful in networks
+
+Cryptographic Hash
+  - Hash: computed fixed length output from arbitrary length input
+    => Typical sizes 160-412 bits
+    => Very cheap to compute, faster than network
+  - Cryptographic hash: collision-resistant
+    => Intractable to find x != y such that H(x) = H(y)
+    => Such that collisions exist: 2^(2^30 -256) GB blocks have same 256-bit hash)
+    => No one has been able to find one, even after analyzing the algorithm for years
+  - Use SHA-256 or SHA-512 today (SHA-2)
+    => Historically, most popular hash was SHA-1, but it's nearly broken
+    => Oct 2, 2012, Keccak algorithm chosen by NIST for SHA-3
+      * Goal: alternative, dissimilar hash function to SHA-2
+
+
+
+### 8-8 Public Key Cryptography - Hidden in plain sight
+
+Confidentiality
+  - Three (randomized) algorithms
+    => Generate: G(1^k) -> K, K^-1 (randomized)
+    => Encrypt: E(K, m) -> {m}k (randomized)
+    => Decrypt: D(K^-1, {m}k) -> m
+  - Provides confidentiality: can't derive m from {m}k without K^-1
+    => K can be made public: can't derive K^-1 from K
+    => Everyone can share the same K ("public" key)
+  - Encrypt must be randomized
+    => Same plaintext sent multiple times must generate different ciphertexts
+    => Otherwise can easily guess plaintext for small message space ("yes", "no")
+
+Integrity: Signatures
+  - Three (randomized algorithms)
+    => Generate
+    => Sign
+    => Verify
+  - Provides integrity like a MAC
+    => Cannot produce valid pair without K^-1
+    => But only need K to verify, cannot derive K^-1 from K
+    => So K can be publicly known
+
+Popular Public Key Algorithms
+  - Encryption: RSA, Rabin, ElGamal
+  - Signature: RSA, Rabin.ElGamal, Schnorr, DSA, ...
+  - Warning: message padding critically important
+    => Basic idea behind RSA encryption is simple (modular exponentiation of large integers)
+    => But simple transformations of message to numbers is not secure
+  - Many keys support both signing and encryption
+    => But they use different algorithms
+    => Common error: Sign by "encrypting" with private key
+
+
+
+### 8-9 Certificates - Establishing a chain of trust
+
+- Want to communicate securely with a server
+  => Using public key cryptography, given a public key K, we can verify that another program has the associated private key K^-1
+  => Use public key cryptography to exchange symmetric keys
+- Key management is the problem
+  => How do we get the server's public key?
+  => How can we be sure it's the server's public key?
+
+Attack: Man in the Middle
+  - Attack pretends to be server, gives its own public key
+  - Mounts Man in the Middle attack
+    => Looks just like server to client (except different public key)
+    => Attacker sees, re-encrypts sensitive traffic
+    => Attacker can insert new traffic
+
+Certificate 
+  - document signed by a private key K^-1 that binds a public key K2 to an identity/name N
+  - If we trust the signing party and know their public key, we can use K2 when communicating with N
+
+
+
+### 8-10 Transport Layer Security (TLS) - RFC5246
+
+Transport Layer Security
+  - Secure session layer on top of TCP
+    => Provides stream abstraction (like TCP)
+    => Add confidentiality, integrity, authenticity
+  - More recent version is TLS 1.2, RFC5246
+    => Started as Secure Socket Layer (SSL) by Netscape
+  - Used by HTTPS (lock in browser bar)
